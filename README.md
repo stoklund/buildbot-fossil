@@ -1,5 +1,7 @@
 # Fossil plugin for Buildbot
 
+[![Documentation Status](https://readthedocs.org/projects/buildbot-fossil/badge/?version=latest)](https://buildbot-fossil.readthedocs.io/en/latest/?badge=latest)
+
 [Fossil](https://fossil-scm.org/) is a software configuration management system.
 This [Buildbot](https://buildbot.net) plugin provides two classes to use in
 `master.cfg`:
