@@ -14,7 +14,7 @@ import xml.etree.ElementTree as ET
 log = Logger()
 
 
-class FossilPoller(base.PollingChangeSource, StateMixin):
+class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
 
     """This source will poll a remote fossil repo for changes and submit
     them to the change master."""
@@ -53,9 +53,7 @@ class FossilPoller(base.PollingChangeSource, StateMixin):
 
     @defer.inlineCallbacks
     def reconfigService(self, repourl, **kwargs):
-        # Skip the implementation in PollingChangeSource which raises.
-        # See https://github.com/buildbot/buildbot/issues/5727
-        yield super(base.PollingChangeSource, self).reconfigService(**kwargs)
+        yield super().reconfigService(**kwargs)
         self.repourl = repourl
 
         http_headers = {'User-Agent': 'Buildbot'}
@@ -68,8 +66,8 @@ class FossilPoller(base.PollingChangeSource, StateMixin):
             lastFetch = yield self.getState('lastFetch', [])
             self.lastFetch = set(lastFetch)
             super().activate()
-        except Exception as e:
-            log.err(e, 'while initializing FossilPoller repository')
+        except Exception:
+            log.failure('while initializing FossilPoller repository')
 
     def describe(self):
         status = ""
@@ -92,9 +90,9 @@ class FossilPoller(base.PollingChangeSource, StateMixin):
 
         response = yield self._http.get('/timeline.rss', params=params)
         if response.code != 200:
-            log.err("Fossil {url} returned code "
-                    "{response.code} {response.phrase}",
-                    url=self.repourl, response=response)
+            log.error("Fossil {url} returned code "
+                      "{response.code} {response.phrase}",
+                      url=self.repourl, response=response)
             return
 
         xml = yield response.content()
