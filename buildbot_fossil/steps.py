@@ -29,9 +29,14 @@ class Fossil(Source):
                 config.error("method has no effect in incremental mode")
         elif mode == 'full':
             if method not in self.possible_methods:
-                config.error("method must be one of " + str(self.possible_methods))
+                config.error(
+                    "method must be one of " + str(self.possible_methods))
         else:
-            config.error(f"mode must be 'full' or 'incremental'")
+            config.error("mode must be 'full' or 'incremental'")
+
+        # Defined in run_vc():
+        self.stdio_log = None
+        self.repopath = None
 
     @defer.inlineCallbacks
     def run_vc(self, branch, revision, patch):

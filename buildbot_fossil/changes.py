@@ -1,3 +1,9 @@
+"""Polling Fossil for source changes"""
+
+from datetime import datetime
+import re
+import xml.etree.ElementTree as ET
+
 from twisted.internet import defer
 
 from buildbot import config
@@ -7,9 +13,6 @@ from buildbot.util.httpclientservice import HTTPClientService
 from buildbot.util.logger import Logger
 from buildbot.util.state import StateMixin
 
-from datetime import datetime
-import re
-import xml.etree.ElementTree as ET
 
 log = Logger()
 
@@ -43,14 +46,18 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
                          pollRandomDelayMax=pollRandomDelayMax)
 
         self.repourl = repourl
-        self.lastFetch = set()
 
+        self._last_fetch = set()
+        self._http = None  # Set in reconfigService()
+
+    # pylint: disable=arguments-differ
     def checkConfig(self, repourl, **kwargs):
         if repourl.endswith('/'):
             config.error('repourl must not end in /')
         HTTPClientService.checkAvailable(self.__class__.__name__)
         super().checkConfig(repourl, **kwargs)
 
+    # pylint: disable=arguments-differ
     @defer.inlineCallbacks
     def reconfigService(self, repourl, **kwargs):
         yield super().reconfigService(**kwargs)
@@ -63,8 +70,8 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
     @defer.inlineCallbacks
     def activate(self):
         try:
-            lastFetch = yield self.getState('lastFetch', [])
-            self.lastFetch = set(lastFetch)
+            _last_fetch = yield self.getState('_last_fetch', [])
+            self._last_fetch = set(_last_fetch)
             super().activate()
         except Exception:
             log.failure('while initializing FossilPoller repository')
@@ -141,11 +148,11 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         for ch in changes:
             rev = ch['revision']
             fetched.add(rev)
-            if rev not in self.lastFetch:
+            if rev not in self._last_fetch:
                 # The `src` argument is used to create user objects.
                 # Since buildbot doesn't know about fossil, we pass 'svn'
                 # which has similar user names.
                 yield self.master.data.updates.addChange(src='svn', **ch)
 
-        self.lastFetch = fetched
-        yield self.setState('lastFetch', list(fetched))
+        self._last_fetch = fetched
+        yield self.setState('_last_fetch', list(fetched))

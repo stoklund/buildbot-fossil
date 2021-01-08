@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = """
+    too-many-ancestors,
+    too-many-arguments,
+    broad-except,
+    abstract-method
+"""
