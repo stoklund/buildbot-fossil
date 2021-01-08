@@ -9,6 +9,7 @@ treq = "*"
 
 [dev-packages]
 pylint = "*"
+mock = "*"
 
 [requires]
 python_version = "3"

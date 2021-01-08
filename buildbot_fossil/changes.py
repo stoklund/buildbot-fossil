@@ -93,7 +93,7 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
             log.error("Fossil {url} returned code "
                       "{response.code} {response.phrase}",
                       url=self.repourl, response=response)
-            return
+            return []
 
         xml = yield response.content()
         etree = ET.fromstring(xml)
