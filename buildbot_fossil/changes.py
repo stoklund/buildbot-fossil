@@ -15,6 +15,7 @@ from buildbot.util.state import StateMixin
 
 
 log = Logger()
+XMLNS_MAP = dict(dc="http://purl.org/dc/elements/1.1/")
 
 
 class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
@@ -47,7 +48,7 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
 
         self.repourl = repourl
 
-        self._last_fetch = set()
+        self.last_fetch = set()
         self._http = None  # Set in reconfigService()
 
     # pylint: disable=arguments-differ
@@ -70,8 +71,8 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
     @defer.inlineCallbacks
     def activate(self):
         try:
-            _last_fetch = yield self.getState('_last_fetch', [])
-            self._last_fetch = set(_last_fetch)
+            last_fetch = yield self.getState('last_fetch', [])
+            self.last_fetch = set(last_fetch)
             super().activate()
         except Exception:
             log.failure('while initializing FossilPoller repository')
@@ -84,11 +85,11 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
 
     @defer.inlineCallbacks
     def poll(self):
-        changes = yield self._fetchRSS()
-        yield self._processChanges(changes)
+        changes = yield self._fetch_rss()
+        yield self._process_changes(changes)
 
     @defer.inlineCallbacks
-    def _fetchRSS(self):
+    def _fetch_rss(self):
         # The fossil /timeline.rss entry point takes these query parameters:
         # - y=ci selects checkins only.
         # - n=10 limits the number of entries returned.
@@ -97,62 +98,59 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
 
         response = yield self._http.get('/timeline.rss', params=params)
         if response.code != 200:
-            log.error("Fossil {url} returned code "
+            log.error("Fossil at {url} returned code "
                       "{response.code} {response.phrase}",
                       url=self.repourl, response=response)
             return []
 
         xml = yield response.content()
         etree = ET.fromstring(xml)
-        ns = dict(dc="http://purl.org/dc/elements/1.1/")
         project = etree.findtext('channel/title')
 
         changes = list()
         for node in etree.findall('channel/item'):
-            title = node.findtext('title')
-            link = node.findtext('link')
-            date = node.findtext('pubDate')
-            creator = node.findtext('dc:creator', namespaces=ns)
-
-            ch = dict(
-                revlink=link,
-                author=creator,
+            ch_dict = dict(
+                revlink=node.findtext('link'),
+                author=node.findtext('dc:creator', namespaces=XMLNS_MAP),
                 repository=self.repourl,
                 project=project)
-            changes.append(ch)
+            changes.append(ch_dict)
 
             # Extract tags from the title.
-            m = re.match(r'(.*) \(tags: ([^()]*)\)$', title)
-            if m:
-                ch['comments'] = m[1]
-                tags = m[2].split(', ')
-                ch['branch'] = tags[0]
+            title = node.findtext('title')
+            match = re.match(r'(.*) \(tags: ([^()]*)\)$', title)
+            if match:
+                ch_dict['comments'] = match[1]
+                tags = match[2].split(', ')
+                ch_dict['branch'] = tags[0]
             else:
-                ch['comments'] = title
+                ch_dict['comments'] = title
                 tags = []
 
             # The commit hash is the last part of the link URL.
-            ch['revision'] = link.rsplit('/', 1)[-1]
+            ch_dict['revision'] = ch_dict['revlink'].rsplit('/', 1)[-1]
 
             # Date format: Sat, 26 Dec 2020 00:00:42 +0000
-            dt = datetime.strptime(date, '%a, %d %b %Y %H:%M:%S %z')
-            ch['when_timestamp'] = datetime2epoch(dt)
+            ch_dict['when_timestamp'] = datetime2epoch(
+                datetime.strptime(
+                    node.findtext('pubDate'),
+                    '%a, %d %b %Y %H:%M:%S %z'))
 
         # Changes appear from newest to oldest in the RSS feed.
         changes.reverse()
         return changes
 
     @defer.inlineCallbacks
-    def _processChanges(self, changes):
+    def _process_changes(self, changes):
         fetched = set()
-        for ch in changes:
-            rev = ch['revision']
+        for ch_dict in changes:
+            rev = ch_dict['revision']
             fetched.add(rev)
-            if rev not in self._last_fetch:
+            if rev not in self.last_fetch:
                 # The `src` argument is used to create user objects.
                 # Since buildbot doesn't know about fossil, we pass 'svn'
                 # which has similar user names.
-                yield self.master.data.updates.addChange(src='svn', **ch)
+                yield self.master.data.updates.addChange(src='svn', **ch_dict)
 
-        self._last_fetch = fetched
-        yield self.setState('_last_fetch', list(fetched))
+        self.last_fetch = fetched
+        yield self.setState('last_fetch', list(fetched))

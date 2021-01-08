@@ -1,5 +1,7 @@
 """Fossil source build step"""
 
+import re
+
 from twisted.internet import defer
 
 from buildbot import config
@@ -8,7 +10,6 @@ from buildbot.process import buildstep
 from buildbot.process.results import SUCCESS
 from buildbot.steps.source.base import Source
 
-import re
 
 class Fossil(Source):
 
@@ -18,7 +19,8 @@ class Fossil(Source):
 
     possible_methods = ('clean', 'copy', 'clobber')
 
-    def __init__(self, repourl=None, mode='incremental', method=None, **kwargs):
+    def __init__(self, repourl=None, mode='incremental', method=None,
+                 **kwargs):
         self.repourl = repourl
         self.mode = mode
         self.method = method
@@ -43,7 +45,7 @@ class Fossil(Source):
         """Main entry point for source steps"""
         self.stdio_log = yield self.addLogForRemoteCommands("stdio")
 
-        # We store the repo file as `build.fossil` next to the `build/` workdir.
+        # Store the repo file as `build.fossil` next to the `build/` workdir.
         self.repopath = self.workdir.rstrip(r'\/') + '.fossil'
 
         # Bring the workdir to a state where only an update is needed.
@@ -63,7 +65,8 @@ class Fossil(Source):
         if patch:
             yield self.patch(patch)
 
-        # Run fossil status after applying the patch to show changes in the log.
+        # Run fossil status after applying the patch to show changes in the
+        # stdio log.
         res = yield self.fossil_status()
         return res
 
@@ -81,13 +84,14 @@ class Fossil(Source):
         """
         Attempt an incremental mode update, or fall back to a full checkout.
 
-        A normal incremental update assumes that `workdir` already contains a checkout:
+        A normal incremental update assumes that `workdir` already contains a
+        checkout:
 
             fossil revert
             fossil update $revision
 
-        The revert ensures that any changed to versioned files are reverted, but
-        any extra files in the workdir are preserved.
+        The revert ensures that any changed to versioned files are reverted,
+        but any extra files in the workdir are preserved.
         """
         repo_ok = yield self._check_repo()
         if not repo_ok:
@@ -101,7 +105,6 @@ class Fossil(Source):
         yield self.msg("failed to revert, using full/copy checkout")
         res = yield self.full_clean('copy', repo_ok)
         return res
-
 
     @defer.inlineCallbacks
     def full_clean(self, method, repo_ok=None):
@@ -117,8 +120,8 @@ class Fossil(Source):
 
         if method == 'clobber':
             yield self.runRmFile(self.repopath, abandonOnFailure=False)
-            cmd = yield self.fossil('clone', self.repourl, self.repopath,
-                                     workdir='.')
+            cmd = yield self.fossil(
+                'clone', self.repourl, self.repopath, workdir='.')
             if cmd.didFail():
                 yield self.check_fossil()
             if cmd.results() != SUCCESS:
@@ -209,13 +212,14 @@ class Fossil(Source):
             return cmd.results()
 
         # Extract got_revision from the status output.
-        m = re.search(r'^checkout:\s+([0-9a-f]+)', cmd.stdout, re.MULTILINE)
-        if m:
-            self.updateSourceProperty('got_revision', m[1])
+        match = re.search(
+            r'^checkout:\s+([0-9a-f]+)', cmd.stdout, re.MULTILINE)
+        if match:
+            self.updateSourceProperty('got_revision', match[1])
 
-        m = re.search(r'^tags:\s+(.+)$', cmd.stdout, re.MULTILINE)
-        if m:
-            self.updateSourceProperty('got_tags', m[1].split(', '))
+        match = re.search(r'^tags:\s+(.+)$', cmd.stdout, re.MULTILINE)
+        if match:
+            self.updateSourceProperty('got_tags', match[1].split(', '))
 
         return SUCCESS
 
@@ -236,7 +240,8 @@ class Fossil(Source):
         attributes can be examined.
 
         @param args    Positional arguments for the `fossil` command.
-        @param workdir Alternative working directory relative to the builder's base.
+        @param workdir Alternative working directory relative to the builder's
+                       base.
         """
         workdir = kwargs.pop('workdir', self.workdir)
         command = ['fossil'] + list(args)

@@ -1,15 +1,18 @@
+"""Tests for changes.FossilPoller"""
+
 from twisted.internet import defer
 from twisted.trial import unittest
-
-from ..changes import FossilPoller
 
 from buildbot.test.fake import httpclientservice as fakehttpclientservice
 from buildbot.test.util.misc import TestReactorMixin
 from buildbot.test.util.changesource import ChangeSourceMixin
 
+from ..changes import FossilPoller
+
 
 class TestRSSFossilPoller(
         ChangeSourceMixin, TestReactorMixin, unittest.TestCase):
+    """Testing the RSS mode of FossilPoller"""
 
     @defer.inlineCallbacks
     def setUp(self):
@@ -23,10 +26,11 @@ class TestRSSFossilPoller(
         yield self.tearDownChangeSource()
 
     @defer.inlineCallbacks
-    def newChangeSource(self, repourl, **kwargs):
+    def new_change_source(self, repourl, **kwargs):
         '''
         Create a new fake HTTP service and change source. Don't start them yet.
         '''
+        # pylint: disable=attribute-defined-outside-init
         http_headers = {'User-Agent': 'Buildbot'}
         self.http = yield fakehttpclientservice.HTTPClientService.getService(
             self.master, self, repourl, headers=http_headers)
@@ -38,14 +42,19 @@ class TestRSSFossilPoller(
 
     @defer.inlineCallbacks
     def test_name(self):
+        """
+        Name should be equal to repourl so change_hook/poller is easier to use.
+        """
         url = 'https://fossil-scm.org/home'
-        yield self.newChangeSource(url)
-        # Name should be equal to repourl so change_hook/poller is easier.
+        yield self.new_change_source(url)
         self.assertEqual(url, self.changesource.name)
 
     @defer.inlineCallbacks
     def test_describe(self):
-        yield self.newChangeSource('nowhere')
+        """
+        The describe() method can provide more info
+        """
+        yield self.new_change_source('nowhere')
         self.http.expect('get', '/timeline.rss', params={'y': 'ci'}, code=404)
         yield self.startChangeSource()
         self.assertEqual("FossilPoller watching 'nowhere'",
