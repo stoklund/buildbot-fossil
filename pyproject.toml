@@ -1,7 +1,3 @@
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [tool.pylint."MESSAGES CONTROL"]
 disable = """
     too-many-ancestors,
@@ -9,3 +5,23 @@ disable = """
     broad-except,
     abstract-method
 """
+
+[tool.poetry]
+name = "buildbot-fossil"
+version = "0.0"
+description = "Fossil plugin for Buildbot"
+authors = ["Jakob Stoklund Olesen <stoklund@2pi.dk>"]
+license = "GPLv2"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+buildbot = {path = "../buildbot/master", develop = true}
+treq = "^20.9.0"
+
+[tool.poetry.dev-dependencies]
+mock = "^4.0.3"
+pylint = "^2.6.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
