@@ -9,9 +9,26 @@ disable = """
 [tool.poetry]
 name = "buildbot-fossil"
 version = "0.0"
-description = "Fossil plugin for Buildbot"
+description = "Fossil version control plugin for Buildbot"
+license = "GPL-2.0-only"
 authors = ["Jakob Stoklund Olesen <stoklund@2pi.dk>"]
-license = "GPLv2"
+readme = "README.md"
+homepage = "https://github.com/stoklund/buildbot-fossil"
+repository = "https://github.com/stoklund/buildbot-fossil"
+documentation = "https://buildbot-fossil.readthedocs.io/"
+keywords = ["Buildbot", "Fossil SCM"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Testing",
+]
+
+[tool.poetry.plugins."buildbot.changes"]
+FossilPoller = "buildbot_fossil.changes:FossilPoller"
+
+[tool.poetry.plugins."buildbot.steps"]
+Fossil = "buildbot_fossil.steps:Fossil"
 
 [tool.poetry.dependencies]
 python = "^3.6"
