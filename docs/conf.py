@@ -4,32 +4,33 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../buildbot_fossil'))
+
+sys.path.insert(0, os.path.abspath("../buildbot_fossil"))
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'buildbot-fossil'
-copyright = '2021, Jakob Stoklund Olesen'
-author = 'Jakob Stoklund Olesen'
+project = "buildbot-fossil"
+copyright = "2021, Jakob Stoklund Olesen"
+author = "Jakob Stoklund Olesen"
 
 
 # -- General configuration ---------------------------------------------------
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.todo',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.todo",
 ]
 
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 
 # -- Options for HTML output -------------------------------------------------
 
-html_theme = 'pyramid'
-html_static_path = ['_static']
+html_theme = "pyramid"
+html_static_path = ["_static"]
 
 
 # -- Extension configuration -------------------------------------------------

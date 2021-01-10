@@ -15,24 +15,22 @@ class Fossil(Source):
 
     """Check out a revision from the Fossil SCM"""
 
-    name = 'fossil'
+    name = "fossil"
 
-    possible_methods = ('clean', 'copy', 'clobber')
+    possible_methods = ("clean", "copy", "clobber")
 
-    def __init__(self, repourl=None, mode='incremental', method=None,
-                 **kwargs):
+    def __init__(self, repourl=None, mode="incremental", method=None, **kwargs):
         self.repourl = repourl
         self.mode = mode
         self.method = method
         super().__init__(mode=mode, **kwargs)
 
-        if mode == 'incremental':
+        if mode == "incremental":
             if method is not None:
                 config.error("method has no effect in incremental mode")
-        elif mode == 'full':
+        elif mode == "full":
             if method not in self.possible_methods:
-                config.error(
-                    "method must be one of " + str(self.possible_methods))
+                config.error("method must be one of " + str(self.possible_methods))
         else:
             config.error("mode must be 'full' or 'incremental'")
 
@@ -46,10 +44,10 @@ class Fossil(Source):
         self.stdio_log = yield self.addLogForRemoteCommands("stdio")
 
         # Store the repo file as `build.fossil` next to the `build/` workdir.
-        self.repopath = self.workdir.rstrip(r'\/') + '.fossil'
+        self.repopath = self.workdir.rstrip(r"\/") + ".fossil"
 
         # Bring the workdir to a state where only an update is needed.
-        if self.mode == 'incremental':
+        if self.mode == "incremental":
             yield self.msg("incremental update")
             res = yield self.incremental_clean()
         else:
@@ -95,15 +93,15 @@ class Fossil(Source):
         """
         repo_ok = yield self._check_repo()
         if not repo_ok:
-            res = yield self.full_clean('clobber', repo_ok)
+            res = yield self.full_clean("clobber", repo_ok)
             return res
 
-        cmd = yield self.fossil('revert')
+        cmd = yield self.fossil("revert")
         if not cmd.didFail():
             return cmd.results()  # success or cancelled
 
         yield self.msg("failed to revert, using full/copy checkout")
-        res = yield self.full_clean('copy', repo_ok)
+        res = yield self.full_clean("copy", repo_ok)
         return res
 
     @defer.inlineCallbacks
@@ -112,44 +110,43 @@ class Fossil(Source):
         Perform a full mode checkout according to `method`.
         """
         # Fall back to clobber unless we have a good repo clone.
-        if method != 'clobber':
+        if method != "clobber":
             if repo_ok is None:
                 repo_ok = yield self._check_repo()
             if not repo_ok:
-                method = 'clobber'
+                method = "clobber"
 
-        if method == 'clobber':
+        if method == "clobber":
             yield self.runRmFile(self.repopath, abandonOnFailure=False)
-            cmd = yield self.fossil(
-                'clone', self.repourl, self.repopath, workdir='.')
+            cmd = yield self.fossil("clone", self.repourl, self.repopath, workdir=".")
             if cmd.didFail():
                 yield self.check_fossil()
             if cmd.results() != SUCCESS:
                 return cmd.results()
             # After cloning, proceed as 'copy'
-            method = 'copy'
+            method = "copy"
 
         # We now have a good repo.
 
         # Clean can fail if the workdir isn't a proper checkout,
         # or if it is in a very bad state. Fall back to 'copy'
-        if method == 'clean':
-            cmd = yield self.fossil('clean', '--verily')
+        if method == "clean":
+            cmd = yield self.fossil("clean", "--verily")
             if cmd.results() == SUCCESS:
-                cmd = yield self.fossil('revert')
+                cmd = yield self.fossil("revert")
 
             if cmd.didFail():
                 yield self.msg("problem cleaning, falling back to full/copy")
-                method = 'copy'
+                method = "copy"
             else:
                 # succeeded or cancelled, don't delete anything.
                 return cmd.results()
 
-        if method == 'copy':
+        if method == "copy":
             yield self.runRmdir(self.workdir)
-            cmd = yield self.fossil('open', self.repopath,
-                                    '--workdir', self.workdir, '--empty',
-                                    workdir='.')
+            cmd = yield self.fossil(
+                "open", self.repopath, "--workdir", self.workdir, "--empty", workdir="."
+            )
             if cmd.results() != SUCCESS:
                 return cmd.results()
 
@@ -162,22 +159,27 @@ class Fossil(Source):
 
         Returns `True` for a good repo.
         """
-        cmd = yield self.fossil('remote', '-R', self.repopath,
-                                workdir='.', collectStdout=True)
+        cmd = yield self.fossil(
+            "remote", "-R", self.repopath, workdir=".", collectStdout=True
+        )
 
         # Do we even have a working fossil executable?
         if cmd.didFail():
             yield self.check_fossil()
 
         if cmd.results() != SUCCESS:
-            yield self.msg("couldn't read {}, falling back to full/clobber",
-                           self.repopath)
+            yield self.msg(
+                "couldn't read {}, falling back to full/clobber", self.repopath
+            )
             return False
 
         remote = cmd.stdout.strip()
         if remote != self.repourl:
-            yield self.msg("expected remote URL {} in {}, using full/clobber",
-                           self.repourl, self.repopath)
+            yield self.msg(
+                "expected remote URL {} in {}, using full/clobber",
+                self.repourl,
+                self.repopath,
+            )
             return False
 
         return True
@@ -197,29 +199,28 @@ class Fossil(Source):
         if revision:
             version = revision
         elif branch:
-            version = 'tag:' + branch
+            version = "tag:" + branch
         else:
-            version = 'tip'
+            version = "tip"
 
-        cmd = yield self.fossil('update', version)
+        cmd = yield self.fossil("update", version)
         return cmd.results()
 
     @defer.inlineCallbacks
     def fossil_status(self):
         """Check the status of the checkout, set build properties"""
-        cmd = yield self.fossil('status', '--differ', collectStdout=True)
+        cmd = yield self.fossil("status", "--differ", collectStdout=True)
         if cmd.results() != SUCCESS:
             return cmd.results()
 
         # Extract got_revision from the status output.
-        match = re.search(
-            r'^checkout:\s+([0-9a-f]+)', cmd.stdout, re.MULTILINE)
+        match = re.search(r"^checkout:\s+([0-9a-f]+)", cmd.stdout, re.MULTILINE)
         if match:
-            self.updateSourceProperty('got_revision', match[1])
+            self.updateSourceProperty("got_revision", match[1])
 
-        match = re.search(r'^tags:\s+(.+)$', cmd.stdout, re.MULTILINE)
+        match = re.search(r"^tags:\s+(.+)$", cmd.stdout, re.MULTILINE)
         if match:
-            self.updateSourceProperty('got_tags', match[1].split(', '))
+            self.updateSourceProperty("got_tags", match[1].split(", "))
 
         return SUCCESS
 
@@ -227,7 +228,7 @@ class Fossil(Source):
     def check_fossil(self):
         """Check that the worker has a fossil executable"""
         yield self.msg("checking fossil executable")
-        cmd = yield self.fossil('version', '-v')
+        cmd = yield self.fossil("version", "-v")
         if cmd.didFail():
             raise WorkerSetupError("fossil is not installed on worker")
 
@@ -243,10 +244,10 @@ class Fossil(Source):
         @param workdir Alternative working directory relative to the builder's
                        base.
         """
-        workdir = kwargs.pop('workdir', self.workdir)
-        command = ['fossil'] + list(args)
+        workdir = kwargs.pop("workdir", self.workdir)
+        command = ["fossil"] + list(args)
 
-        for arg in ('env', 'logEnviron', 'timeout'):
+        for arg in ("env", "logEnviron", "timeout"):
             if arg not in kwargs:
                 kwargs[arg] = getattr(self, arg)
 

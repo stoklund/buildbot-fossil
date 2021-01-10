@@ -1,1 +1,1 @@
-'''Fossil plugin for Buildbot'''
+"""Fossil plugin for Buildbot"""
