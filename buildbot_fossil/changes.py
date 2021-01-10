@@ -23,28 +23,37 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
     """This source will poll a remote fossil repo for changes and submit
     them to the change master."""
 
-    compare_attrs = ("repourl",
-                     "pollInterval", "pollAtLaunch",
-                     "pollRandomDelayMin", "pollRandomDelayMax")
+    compare_attrs = (
+        "repourl",
+        "pollInterval",
+        "pollAtLaunch",
+        "pollRandomDelayMin",
+        "pollRandomDelayMax",
+    )
 
-    db_class_name = 'FossilPoller'
+    db_class_name = "FossilPoller"
 
-    def __init__(self, repourl,
-                 name=None,
-                 pollInterval=10 * 60,
-                 pollAtLaunch=True,
-                 pollRandomDelayMin=0,
-                 pollRandomDelayMax=0):
-        '''Create a Fossil SCM poller.'''
+    def __init__(
+        self,
+        repourl,
+        name=None,
+        pollInterval=10 * 60,
+        pollAtLaunch=True,
+        pollRandomDelayMin=0,
+        pollRandomDelayMax=0,
+    ):
+        """Create a Fossil SCM poller."""
         if name is None:
             name = repourl
 
-        super().__init__(repourl,
-                         name=name,
-                         pollInterval=pollInterval,
-                         pollAtLaunch=pollAtLaunch,
-                         pollRandomDelayMin=pollRandomDelayMin,
-                         pollRandomDelayMax=pollRandomDelayMax)
+        super().__init__(
+            repourl,
+            name=name,
+            pollInterval=pollInterval,
+            pollAtLaunch=pollAtLaunch,
+            pollRandomDelayMin=pollRandomDelayMin,
+            pollRandomDelayMax=pollRandomDelayMax,
+        )
 
         self.repourl = repourl
 
@@ -53,8 +62,8 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
 
     # pylint: disable=arguments-differ
     def checkConfig(self, repourl, **kwargs):
-        if repourl.endswith('/'):
-            config.error('repourl must not end in /')
+        if repourl.endswith("/"):
+            config.error("repourl must not end in /")
         HTTPClientService.checkAvailable(self.__class__.__name__)
         super().checkConfig(repourl, **kwargs)
 
@@ -64,18 +73,19 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         yield super().reconfigService(**kwargs)
         self.repourl = repourl
 
-        http_headers = {'User-Agent': 'Buildbot'}
+        http_headers = {"User-Agent": "Buildbot"}
         self._http = yield HTTPClientService.getService(
-            self.master, repourl, headers=http_headers)
+            self.master, repourl, headers=http_headers
+        )
 
     @defer.inlineCallbacks
     def activate(self):
         try:
-            last_fetch = yield self.getState('last_fetch', [])
+            last_fetch = yield self.getState("last_fetch", [])
             self.last_fetch = set(last_fetch)
             super().activate()
         except Exception:
-            log.failure('while initializing FossilPoller repository')
+            log.failure("while initializing FossilPoller repository")
 
     def describe(self):
         status = ""
@@ -94,47 +104,49 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         # - y=ci selects checkins only.
         # - n=10 limits the number of entries returned.
         # - tag=foo selects a single branch
-        params = dict(y='ci')
+        params = dict(y="ci")
 
-        response = yield self._http.get('/timeline.rss', params=params)
+        response = yield self._http.get("/timeline.rss", params=params)
         if response.code != 200:
-            log.error("Fossil at {url} returned code "
-                      "{response.code} {response.phrase}",
-                      url=self.repourl, response=response)
+            log.error(
+                "Fossil at {url} returned code {response.code}",
+                url=self.repourl,
+                response=response,
+            )
             return []
 
         xml = yield response.content()
         etree = ET.fromstring(xml)
-        project = etree.findtext('channel/title')
+        project = etree.findtext("channel/title")
 
         changes = list()
-        for node in etree.findall('channel/item'):
+        for node in etree.findall("channel/item"):
             ch_dict = dict(
-                revlink=node.findtext('link'),
-                author=node.findtext('dc:creator', namespaces=XMLNS_MAP),
+                revlink=node.findtext("link"),
+                author=node.findtext("dc:creator", namespaces=XMLNS_MAP),
                 repository=self.repourl,
-                project=project)
+                project=project,
+            )
             changes.append(ch_dict)
 
             # Extract tags from the title.
-            title = node.findtext('title')
-            match = re.match(r'(.*) \(tags: ([^()]*)\)$', title)
+            title = node.findtext("title")
+            match = re.match(r"(.*) \(tags: ([^()]*)\)$", title)
             if match:
-                ch_dict['comments'] = match[1]
-                tags = match[2].split(', ')
-                ch_dict['branch'] = tags[0]
+                ch_dict["comments"] = match[1]
+                tags = match[2].split(", ")
+                ch_dict["branch"] = tags[0]
             else:
-                ch_dict['comments'] = title
+                ch_dict["comments"] = title
                 tags = []
 
             # The commit hash is the last part of the link URL.
-            ch_dict['revision'] = ch_dict['revlink'].rsplit('/', 1)[-1]
+            ch_dict["revision"] = ch_dict["revlink"].rsplit("/", 1)[-1]
 
             # Date format: Sat, 26 Dec 2020 00:00:42 +0000
-            ch_dict['when_timestamp'] = datetime2epoch(
-                datetime.strptime(
-                    node.findtext('pubDate'),
-                    '%a, %d %b %Y %H:%M:%S %z'))
+            ch_dict["when_timestamp"] = datetime2epoch(
+                datetime.strptime(node.findtext("pubDate"), "%a, %d %b %Y %H:%M:%S %z")
+            )
 
         # Changes appear from newest to oldest in the RSS feed.
         changes.reverse()
@@ -144,13 +156,13 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
     def _process_changes(self, changes):
         fetched = set()
         for ch_dict in changes:
-            rev = ch_dict['revision']
+            rev = ch_dict["revision"]
             fetched.add(rev)
             if rev not in self.last_fetch:
                 # The `src` argument is used to create user objects.
                 # Since buildbot doesn't know about fossil, we pass 'svn'
                 # which has similar user names.
-                yield self.master.data.updates.addChange(src='svn', **ch_dict)
+                yield self.master.data.updates.addChange(src="svn", **ch_dict)
 
         self.last_fetch = fetched
-        yield self.setState('last_fetch', list(fetched))
+        yield self.setState("last_fetch", list(fetched))
