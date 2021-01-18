@@ -68,12 +68,11 @@ visualize = ["graphviz (>0.5.1)", "Twisted (>=16.1.1)"]
 
 [[package]]
 name = "buildbot"
-version = "2.10.1.dev49"
+version = "2.10.0"
 description = "The Continuous Integration Framework"
 category = "main"
 optional = false
 python-versions = "*"
-develop = true
 
 [package.dependencies]
 autobahn = ">=0.16.0"
@@ -88,14 +87,10 @@ txaio = ">=2.2.2"
 "zope.interface" = ">=4.1.1"
 
 [package.extras]
-bundle = ["buildbot-www (==2.10.1)", "buildbot-worker (==2.10.1)", "buildbot-waterfall-view (==2.10.1)", "buildbot-console-view (==2.10.1)", "buildbot-grid-view (==2.10.1)"]
+bundle = ["buildbot-www (==2.10.0)", "buildbot-worker (==2.10.0)", "buildbot-waterfall-view (==2.10.0)", "buildbot-console-view (==2.10.0)", "buildbot-grid-view (==2.10.0)"]
 docs = ["docutils (>=0.16.0)", "sphinx (>=3.2.0)", "sphinx-rtd-theme (>=0.5)", "sphinxcontrib-blockdiag", "sphinxcontrib-spelling", "sphinxcontrib-websupport", "pyenchant", "sphinx-jinja", "towncrier"]
 test = ["setuptools-trial", "isort", "pylint (<1.7.0)", "pyenchant", "flake8 (>=2.6.0,<2.7.0)", "treq", "txrequests", "pypugjs", "boto3", "moto", "mock (>=2.0.0)", "parameterized", "lz4"]
 tls = ["Twisted[tls] (>=17.9.0)", "pyopenssl (>=16.0.0)", "service-identity", "idna (>=0.6)"]
-
-[package.source]
-type = "directory"
-url = "../buildbot/master"
 
 [[package]]
 name = "cffi"
@@ -551,7 +546,7 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6"
-content-hash = "a07f77ad63821503aa8304a508c024a29b66fc7f28e1a9081edc38858788cd9a"
+content-hash = "ae9a94e749d3b6ea4153c39523e76645396c9a791a34aefe04b9f015c33eaeb1"
 
 [metadata.files]
 astroid = [
@@ -570,7 +565,10 @@ automat = [
     {file = "Automat-20.2.0-py2.py3-none-any.whl", hash = "sha256:b6feb6455337df834f6c9962d6ccf771515b7d939bca142b29c20c2376bc6111"},
     {file = "Automat-20.2.0.tar.gz", hash = "sha256:7979803c74610e11ef0c0d68a2942b152df52da55336e0c9d58daf1831cbdf33"},
 ]
-buildbot = []
+buildbot = [
+    {file = "buildbot-2.10.0-py3-none-any.whl", hash = "sha256:09df375359ecb51c080edf07ad8d961e4309382d6f116275fb9d914b47fbda3c"},
+    {file = "buildbot-2.10.0.tar.gz", hash = "sha256:8eff3f59325d2a914aa4b2f2ab3fa4a589743248c5b800b10edd33755fb9cf19"},
+]
 cffi = [
     {file = "cffi-1.14.4-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:ebb253464a5d0482b191274f1c8bf00e33f7e0b9c66405fbffc61ed2c839c775"},
     {file = "cffi-1.14.4-cp27-cp27m-manylinux1_i686.whl", hash = "sha256:2c24d61263f511551f740d1a065eb0212db1dbbbbd241db758f5244281590c06"},
