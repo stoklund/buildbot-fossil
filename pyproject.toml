@@ -32,13 +32,12 @@ Fossil = "buildbot_fossil.steps:Fossil"
 
 [tool.poetry.dependencies]
 python = "^3.6"
-buildbot = "^2.10.0"
+buildbot = {path = "../buildbot/master"}
 treq = "^20.9.0"
 
 [tool.poetry.dev-dependencies]
 mock = "^4.0.3"
 pylint = "^2.6.0"
-buildbot = {path = "../buildbot/master"}
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
