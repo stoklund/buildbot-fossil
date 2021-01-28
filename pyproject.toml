@@ -32,7 +32,7 @@ Fossil = "buildbot_fossil.steps:Fossil"
 
 [tool.poetry.dependencies]
 python = "^3.6"
-buildbot = {path = "../buildbot/master"}
+buildbot = {path = "../buildbot/master", develop = true}
 treq = "^20.9.0"
 
 [tool.poetry.dev-dependencies]
