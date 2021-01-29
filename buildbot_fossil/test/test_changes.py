@@ -1,13 +1,14 @@
 """Tests for changes.FossilPoller"""
 
-from twisted.internet import defer
-from twisted.trial import unittest
+from datetime import datetime, timezone
 
-from buildbot.util import httpclientservice
 from buildbot.test.fake import httpclientservice as fakehttpclientservice
-from buildbot.test.util.misc import TestReactorMixin
 from buildbot.test.util.changesource import ChangeSourceMixin
 from buildbot.test.util.logging import LoggingMixin
+from buildbot.test.util.misc import TestReactorMixin
+from buildbot.util import datetime2epoch, httpclientservice
+from twisted.internet import defer
+from twisted.trial import unittest
 
 from ..changes import FossilPoller
 
@@ -124,6 +125,34 @@ class TestRSSFossilPoller(
         </rss>
     """
 
+    RSS2 = """<?xml version="1.0"?>
+        <rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+          <channel>
+            <title>Buildbot-fossil</title>
+            <link>http://fossil.local/buildbot-fossil</link>
+            <description>Fossil plugin for Buildbot</description>
+            <pubDate>Fri, 29 Jan 2021 01:19:34 +0000</pubDate>
+            <generator>Fossil version [49f68be83b] 2021-01-02 13:39:46</generator>
+            <item>
+              <title>*MERGE* Test logging, merge poetry (tags: trunk)</title>
+              <link>http://fossil.local/buildbot-fossil/info/eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</link>
+              <description>*MERGE* Test logging, merge poetry (tags: trunk)</description>
+              <pubDate>Sun, 10 Jan 2021 18:44:36 +0000</pubDate>
+              <dc:creator>jolesen</dc:creator>
+              <guid>http://fossil.local/buildbot-fossil/info/eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</guid>
+            </item>
+            <item>
+              <title>*FORK* Test for missing HTTP service (tags: trunk)</title>
+              <link>http://fossil.local/buildbot-fossil/info/fdd7d7dcde7a8fea1c50728e511973f630b04daee0297bbeb70a7fb494e44f21</link>
+              <description>*FORK* Test for missing HTTP service (tags: trunk)</description>
+              <pubDate>Sat, 9 Jan 2021 01:41:38 +0000</pubDate>
+              <dc:creator>jolesen</dc:creator>
+              <guid>http://fossil.local/buildbot-fossil/info/fdd7d7dcde7a8fea1c50728e511973f630b04daee0297bbeb70a7fb494e44f21</guid>
+            </item>
+          </channel>
+        </rss>
+    """
+
     @defer.inlineCallbacks
     def test_rss(self):
         """
@@ -152,6 +181,10 @@ class TestRSSFossilPoller(
         # RSS doesn't provide list of changes files.
         self.assertIsNone(chdict["files"])
         self.assertEqual(chdict["comments"], "*MERGE* Test logging, merge poetry")
+        self.assertEqual(
+            chdict["when_timestamp"],
+            datetime2epoch(datetime(2021, 1, 10, 18, 44, 36, tzinfo=timezone.utc)),
+        )
 
         chdict = self.master.data.updates.changesAdded[1]
         self.assertEqual(
@@ -163,3 +196,16 @@ class TestRSSFossilPoller(
             "Remove the path dependency on buildbot. "
             "This prevented the built wheel from working correctly on the server.",
         )
+
+    @defer.inlineCallbacks
+    def test_rss_repeat_filter(self):
+        """
+        Test that duplicates are filtered out.
+        """
+        yield self.new_changesource(self.REPOURL)
+        self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS)
+        self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS2)
+        yield self.start_changesource()
+        yield self.changesource.poll()
+        # The two feeds have one item in common.
+        self.assertEqual(len(self.master.data.updates.changesAdded), 3)

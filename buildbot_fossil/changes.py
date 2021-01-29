@@ -1,10 +1,8 @@
 """Polling Fossil for source changes"""
 
-from datetime import datetime
 import re
 import xml.etree.ElementTree as ET
-
-from twisted.internet import defer
+from datetime import datetime
 
 from buildbot import config
 from buildbot.changes import base
@@ -12,7 +10,7 @@ from buildbot.util import datetime2epoch
 from buildbot.util.httpclientservice import HTTPClientService
 from buildbot.util.logger import Logger
 from buildbot.util.state import StateMixin
-
+from twisted.internet import defer
 
 log = Logger()
 XMLNS_MAP = dict(dc="http://purl.org/dc/elements/1.1/")

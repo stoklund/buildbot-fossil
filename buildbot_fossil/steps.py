@@ -2,13 +2,12 @@
 
 import re
 
-from twisted.internet import defer
-
 from buildbot import config
 from buildbot.interfaces import WorkerSetupError
 from buildbot.process import buildstep
 from buildbot.process.results import SUCCESS
 from buildbot.steps.source.base import Source
+from twisted.internet import defer
 
 
 class Fossil(Source):
