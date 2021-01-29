@@ -95,3 +95,71 @@ class TestRSSFossilPoller(
         self.patch(httpclientservice.HTTPClientService, "checkAvailable", mock_avail)
         with self.assertRaises(RuntimeError):
             yield self.new_changesource(self.REPOURL)
+
+    RSS = """<?xml version="1.0"?>
+        <rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+          <channel>
+            <title>Buildbot-fossil</title>
+            <link>http://fossil.local/buildbot-fossil</link>
+            <description>Fossil plugin for Buildbot</description>
+            <pubDate>Fri, 29 Jan 2021 01:19:34 +0000</pubDate>
+            <generator>Fossil version [49f68be83b] 2021-01-02 13:39:46</generator>
+            <item>
+              <title>Remove the path dependency on buildbot. This prevented the built wheel from working correctly on the server. (tags: trunk)</title>
+              <link>http://fossil.local/buildbot-fossil/info/fe7bf77289d5b0097b27692f1567bc45308272cf8e3456d1a26efc033cfadafb</link>
+              <description>Remove the path dependency on buildbot. This prevented the built wheel from working correctly on the server. (tags: trunk)</description>
+              <pubDate>Mon, 18 Jan 2021 01:05:58 +0000</pubDate>
+              <dc:creator>jolesen</dc:creator>
+              <guid>http://fossil.local/buildbot-fossil/info/fe7bf77289d5b0097b27692f1567bc45308272cf8e3456d1a26efc033cfadafb</guid>
+            </item>
+            <item>
+              <title>*MERGE* Test logging, merge poetry (tags: trunk)</title>
+              <link>http://fossil.local/buildbot-fossil/info/eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</link>
+              <description>*MERGE* Test logging, merge poetry (tags: trunk)</description>
+              <pubDate>Sun, 10 Jan 2021 18:44:36 +0000</pubDate>
+              <dc:creator>jolesen</dc:creator>
+              <guid>http://fossil.local/buildbot-fossil/info/eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</guid>
+            </item>
+          </channel>
+        </rss>
+    """
+
+    @defer.inlineCallbacks
+    def test_rss(self):
+        """
+        Check that we can extract change entries from an RSS feed.
+        """
+        yield self.new_changesource(self.REPOURL)
+        self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS)
+        yield self.start_changesource()
+
+        self.assertEqual(len(self.master.data.updates.changesAdded), 2)
+
+        # Changes should appear in chronological order.
+        chdict = self.master.data.updates.changesAdded[0]
+        self.assertEqual(chdict["author"], "jolesen")
+        self.assertEqual(
+            chdict["revision"],
+            "eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24",
+        )
+        self.assertEqual(
+            chdict["revlink"],
+            "http://fossil.local/buildbot-fossil/info/"
+            "eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24",
+        )
+        self.assertEqual(chdict["branch"], "trunk")
+        self.assertEqual(chdict["repository"], self.REPOURL)
+        # RSS doesn't provide list of changes files.
+        self.assertIsNone(chdict["files"])
+        self.assertEqual(chdict["comments"], "*MERGE* Test logging, merge poetry")
+
+        chdict = self.master.data.updates.changesAdded[1]
+        self.assertEqual(
+            chdict["revision"],
+            "fe7bf77289d5b0097b27692f1567bc45308272cf8e3456d1a26efc033cfadafb",
+        )
+        self.assertEqual(
+            chdict["comments"],
+            "Remove the path dependency on buildbot. "
+            "This prevented the built wheel from working correctly on the server.",
+        )
