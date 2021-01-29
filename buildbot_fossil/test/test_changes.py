@@ -12,13 +12,13 @@ from twisted.trial import unittest
 
 from ..changes import FossilPoller
 
+REPOURL = "https://fossil-scm.example/home"
+
 
 class TestRSSFossilPoller(
     ChangeSourceMixin, LoggingMixin, TestReactorMixin, unittest.TestCase
 ):
     """Testing the RSS mode of FossilPoller"""
-
-    REPOURL = "https://fossil-scm.example/home"
 
     @defer.inlineCallbacks
     def setUp(self):
@@ -42,7 +42,7 @@ class TestRSSFossilPoller(
         self.http = yield fakehttpclientservice.HTTPClientService.getService(
             self.master, self, repourl, headers=http_headers
         )
-        self.changesource = FossilPoller(repourl, **kwargs)
+        self.changesource = FossilPoller(repourl, rss=True, **kwargs)
 
     @defer.inlineCallbacks
     def start_changesource(self):
@@ -54,8 +54,8 @@ class TestRSSFossilPoller(
         """
         Name should be equal to repourl so change_hook/poller is easier to use.
         """
-        yield self.new_changesource(self.REPOURL)
-        self.assertEqual(self.REPOURL, self.changesource.name)
+        yield self.new_changesource(REPOURL)
+        self.assertEqual(REPOURL, self.changesource.name)
         self.assertWasQuiet()
 
     @defer.inlineCallbacks
@@ -63,7 +63,7 @@ class TestRSSFossilPoller(
         """
         An explicit name parameter overrides the default.
         """
-        yield self.new_changesource(self.REPOURL, name="my-poller")
+        yield self.new_changesource(REPOURL, name="my-poller")
         self.assertEqual("my-poller", self.changesource.name)
         self.assertWasQuiet()
 
@@ -95,7 +95,7 @@ class TestRSSFossilPoller(
 
         self.patch(httpclientservice.HTTPClientService, "checkAvailable", mock_avail)
         with self.assertRaises(RuntimeError):
-            yield self.new_changesource(self.REPOURL)
+            yield self.new_changesource(REPOURL)
 
     RSS = """<?xml version="1.0"?>
         <rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
@@ -158,7 +158,7 @@ class TestRSSFossilPoller(
         """
         Check that we can extract change entries from an RSS feed.
         """
-        yield self.new_changesource(self.REPOURL)
+        yield self.new_changesource(REPOURL)
         self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS)
         yield self.start_changesource()
 
@@ -177,7 +177,7 @@ class TestRSSFossilPoller(
             "eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24",
         )
         self.assertEqual(chdict["branch"], "trunk")
-        self.assertEqual(chdict["repository"], self.REPOURL)
+        self.assertEqual(chdict["repository"], REPOURL)
         # RSS doesn't provide list of changes files.
         self.assertIsNone(chdict["files"])
         self.assertEqual(chdict["comments"], "*MERGE* Test logging, merge poetry")
@@ -199,7 +199,7 @@ class TestRSSFossilPoller(
 
         # The change source should save a list of seen revisions.
         self.master.db.state.assertStateByClass(
-            name=self.REPOURL,
+            name=REPOURL,
             class_name="FossilPoller",
             last_fetch=[
                 "eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24",
@@ -212,7 +212,7 @@ class TestRSSFossilPoller(
         """
         Test that duplicates are filtered out.
         """
-        yield self.new_changesource(self.REPOURL)
+        yield self.new_changesource(REPOURL)
         self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS)
         self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS2)
         yield self.start_changesource()
@@ -222,7 +222,7 @@ class TestRSSFossilPoller(
 
         # Don't accumulate revisions, just save the ones from the last fetch (RSS2).
         self.master.db.state.assertStateByClass(
-            name=self.REPOURL,
+            name=REPOURL,
             class_name="FossilPoller",
             last_fetch=[
                 "fdd7d7dcde7a8fea1c50728e511973f630b04daee0297bbeb70a7fb494e44f21",
@@ -236,14 +236,14 @@ class TestRSSFossilPoller(
         Test that the fetched revisions are saved across restarts.
         """
         self.master.db.state.fakeState(
-            name=self.REPOURL,
+            name=REPOURL,
             class_name="FossilPoller",
             last_fetch=[
                 "eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24",
             ],
         )
 
-        yield self.new_changesource(self.REPOURL)
+        yield self.new_changesource(REPOURL)
         self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS)
         yield self.start_changesource()
 

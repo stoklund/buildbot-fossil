@@ -23,6 +23,7 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
 
     compare_attrs = (
         "repourl",
+        "rss",
         "pollInterval",
         "pollAtLaunch",
         "pollRandomDelayMin",
@@ -34,6 +35,7 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
     def __init__(
         self,
         repourl,
+        rss=False,
         name=None,
         pollInterval=10 * 60,
         pollAtLaunch=True,
@@ -46,6 +48,7 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
 
         super().__init__(
             repourl,
+            rss=rss,
             name=name,
             pollInterval=pollInterval,
             pollAtLaunch=pollAtLaunch,
@@ -54,22 +57,27 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         )
 
         self.repourl = repourl
+        self.rss = rss
 
         self.last_fetch = set()
         self._http = None  # Set in reconfigService()
 
     # pylint: disable=arguments-differ
-    def checkConfig(self, repourl, **kwargs):
+    def checkConfig(self, repourl, rss=False, **kwargs):
         if repourl.endswith("/"):
             config.error("repourl must not end in /")
         HTTPClientService.checkAvailable(self.__class__.__name__)
+        if not rss:
+            config.error("JSON not implemented")
+
         super().checkConfig(repourl, **kwargs)
 
     # pylint: disable=arguments-differ
     @defer.inlineCallbacks
-    def reconfigService(self, repourl, **kwargs):
+    def reconfigService(self, repourl, rss=False, **kwargs):
         yield super().reconfigService(**kwargs)
         self.repourl = repourl
+        self.rss = rss
 
         http_headers = {"User-Agent": "Buildbot"}
         self._http = yield HTTPClientService.getService(
