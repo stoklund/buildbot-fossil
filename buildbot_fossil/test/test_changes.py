@@ -253,3 +253,148 @@ class TestRSSFossilPoller(
             chdict["revision"],
             "fe7bf77289d5b0097b27692f1567bc45308272cf8e3456d1a26efc033cfadafb",
         )
+
+
+class TestJSONFossilPoller(
+    ChangeSourceMixin, LoggingMixin, TestReactorMixin, unittest.TestCase
+):
+    """Testing the JSON mode of FossilPoller"""
+
+    @defer.inlineCallbacks
+    def setUp(self):
+        self.setUpTestReactor()
+        self.setUpLogging()
+        yield self.setUpChangeSource()
+        yield self.master.startService()
+
+    @defer.inlineCallbacks
+    def tearDown(self):
+        yield self.master.stopService()
+        yield self.tearDownChangeSource()
+
+    @defer.inlineCallbacks
+    def new_changesource(self, repourl, **kwargs):
+        """
+        Create a new fake HTTP service and change source. Don't start them yet.
+        """
+        # pylint: disable=attribute-defined-outside-init
+        http_headers = {"User-Agent": "Buildbot"}
+        self.http = yield fakehttpclientservice.HTTPClientService.getService(
+            self.master, self, repourl, headers=http_headers
+        )
+        self.changesource = FossilPoller(repourl, **kwargs)
+
+    @defer.inlineCallbacks
+    def start_changesource(self):
+        """Start the change source service running"""
+        yield self.attachChangeSource(self.changesource)
+
+    JSON = {
+        "fossil": "a54732919d8ed1ba3adf0b5032f430da8a0c8883dcdb1affe1666613a236463b",
+        "timestamp": 1611945181,
+        "command": "timeline/checkin",
+        "procTimeUs": 4309,
+        "procTimeMs": 4,
+        "payload": {
+            "limit": 2,
+            "timeline": [
+                {
+                    "type": "checkin",
+                    "uuid": "c4da1011eed6e7ac8c84f7bbd4f23c80af4638bc230da1926587f01381713316",
+                    "isLeaf": True,
+                    "timestamp": 1611943432,
+                    "user": "jolesen",
+                    "comment": "Add an 'rss' flag for enabling RSS mode. Default to JSON which isn't implemented yet.",
+                    "parents": [
+                        "4ccf5d57ec51f0ffde0d1208ba22fe6b8ce1296657763c316f95123d433fe94c"
+                    ],
+                    "tags": ["trunk"],
+                    "files": [
+                        {
+                            "name": "buildbot_fossil/changes.py",
+                            "uuid": "668d8aeb0efab259f1bac662402ee94405e2fef51b472eb9ad841ec8233aa60e",
+                            "parent": "5f9399bf08f7c40fda319b3b7d48cb0ed8512eded25200f1f5c5a891c2347705",
+                            "size": 5523,
+                            "state": "modified",
+                            "downloadPath": "/raw/buildbot_fossil/changes.py?name=668d8aeb0efab259f1bac662402ee94405e2fef51b472eb9ad841ec8233aa60e",
+                        },
+                        {
+                            "name": "buildbot_fossil/test/test_changes.py",
+                            "uuid": "5993611a1e377b1941d717ce549b17b51186353ac3ec7328a5c5c97837a83442",
+                            "parent": "d4247070e0d0e4d298f7bcc2767f653d603491a00fe8f2c937e6b9b8499efa56",
+                            "size": 10774,
+                            "state": "modified",
+                            "downloadPath": "/raw/buildbot_fossil/test/test_changes.py?name=5993611a1e377b1941d717ce549b17b51186353ac3ec7328a5c5c97837a83442",
+                        },
+                    ],
+                },
+                {
+                    "type": "checkin",
+                    "uuid": "4ccf5d57ec51f0ffde0d1208ba22fe6b8ce1296657763c316f95123d433fe94c",
+                    "isLeaf": False,
+                    "timestamp": 1611942417,
+                    "user": "jolesen",
+                    "comment": "Test the filter for repeated revisions. Make the saved list order consistent.",
+                    "parents": [
+                        "f69a18de8a19ace4cc45bc1dbd6baffbad65837be909c0fcb151c0387b608712"
+                    ],
+                    "tags": ["trunk"],
+                    "files": [
+                        {
+                            "name": "buildbot_fossil/changes.py",
+                            "uuid": "5f9399bf08f7c40fda319b3b7d48cb0ed8512eded25200f1f5c5a891c2347705",
+                            "parent": "c11586d95a7b73882af76317cd6b2fbd084d3701637f3424e8ef79863c6b5934",
+                            "size": 5330,
+                            "state": "modified",
+                            "downloadPath": "/raw/buildbot_fossil/changes.py?name=5f9399bf08f7c40fda319b3b7d48cb0ed8512eded25200f1f5c5a891c2347705",
+                        },
+                        {
+                            "name": "buildbot_fossil/test/test_changes.py",
+                            "uuid": "d4247070e0d0e4d298f7bcc2767f653d603491a00fe8f2c937e6b9b8499efa56",
+                            "parent": "1439c07f47de768d7e42ab023f997ee4d57e4d3f634dee51be753db597f7fa9b",
+                            "size": 10823,
+                            "state": "modified",
+                            "downloadPath": "/raw/buildbot_fossil/test/test_changes.py?name=d4247070e0d0e4d298f7bcc2767f653d603491a00fe8f2c937e6b9b8499efa56",
+                        },
+                    ],
+                },
+            ],
+        },
+    }
+
+    @defer.inlineCallbacks
+    def test_json(self):
+        """
+        Check a simple JSON fetch, assuming we're already logged in.
+        """
+        yield self.new_changesource(REPOURL)
+        self.http.expect(
+            "get",
+            "/json/timeline/checkin",
+            params={"files": True},
+            content_json=self.JSON,
+        )
+        yield self.start_changesource()
+
+        self.assertEqual(len(self.master.data.updates.changesAdded), 2)
+
+        # Changes should appear in chronological order.
+        chdict = self.master.data.updates.changesAdded[0]
+        rev = "4ccf5d57ec51f0ffde0d1208ba22fe6b8ce1296657763c316f95123d433fe94c"
+        self.assertEqual(chdict["author"], "jolesen")
+        self.assertEqual(chdict["revision"], rev)
+        self.assertEqual(chdict["revlink"], f"{REPOURL}/info/{rev}")
+        self.assertEqual(chdict["branch"], "trunk")
+        self.assertEqual(chdict["repository"], REPOURL)
+        # TODO: self.assertIsNone(chdict["files"])
+        self.assertEqual(
+            chdict["comments"],
+            "Test the filter for repeated revisions. Make the saved list order consistent.",
+        )
+        self.assertEqual(chdict["when_timestamp"], 1611942417)
+
+        chdict = self.master.data.updates.changesAdded[1]
+        self.assertEqual(
+            chdict["revision"],
+            "c4da1011eed6e7ac8c84f7bbd4f23c80af4638bc230da1926587f01381713316",
+        )

@@ -66,9 +66,10 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
     def checkConfig(self, repourl, rss=False, **kwargs):
         if repourl.endswith("/"):
             config.error("repourl must not end in /")
+        if not rss in (True, False):
+            config.error("The `rss` parameter must be True or False")
+
         HTTPClientService.checkAvailable(self.__class__.__name__)
-        if not rss:
-            config.error("JSON not implemented")
 
         super().checkConfig(repourl, **kwargs)
 
@@ -101,8 +102,76 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
 
     @defer.inlineCallbacks
     def poll(self):
-        changes = yield self._fetch_rss()
+        if not self.rss:
+            changes = yield self._fetch_json()
+        else:
+            changes = yield self._fetch_rss()
         yield self._process_changes(changes)
+
+    @defer.inlineCallbacks
+    def _fetch_json(self):
+        # The /json/timeline/checkin API takes the following parameters:
+        # - files=bool enables the `files` list.
+        # - tag|branch=string only sends checkins for a specific branch.
+        # See https://fossil-scm.org/home/doc/trunk/www/json-api/api-timeline.md
+        payload = yield self._json_get("timeline/checkin", files=True)
+
+        changes = list()
+        for entry in reversed(payload["timeline"]):
+            chdict = dict(
+                author=entry["user"],
+                comments=entry["comment"],
+                revision=entry["uuid"],
+                when_timestamp=entry["timestamp"],
+                revlink=f"{self.repourl}/info/{entry['uuid']}",
+                repository=self.repourl,
+            )
+            changes.append(chdict)
+
+            if "files" in entry:
+                chdict["files"] = [d["name"] for d in entry["files"]]
+
+            tags = entry["tags"]
+            if tags:
+                chdict["branch"] = tags[0]
+
+        return changes
+
+    @defer.inlineCallbacks
+    def _json_get(self, endpoint, **kwargs):
+        """
+        Make a JSON GET request to /json/{endpoint}.
+
+        Returns the returned payload as a dict.
+        """
+        response = yield self._http.get("/json/" + endpoint, params=kwargs)
+        if response.code != 200:
+            log.error(
+                "JSON request to {url}/json/{endpoint} returned "
+                "HTTP status {response.code}",
+                url=self.repourl,
+                endpoint=endpoint,
+                response=response,
+            )
+            raise RuntimeError(f"HTTP {response.code} from {self.repourl}/json")
+
+        # Decode the JSON response envelope.
+        renv = yield response.json()
+        if "fossil" not in renv:
+            raise RuntimeError("JSON response is not from a Fossil server", renv)
+
+        # resultCode is only set for errors.
+        resultCode = str(renv.get("resultCode", ""))
+        if resultCode:
+            if resultCode.startswith("FOSSIL-"):
+                return resultCode
+            raise RuntimeError(f"Invalid resultCode '{resultCode}'")
+
+        payload = renv.get("payload", {})
+        if not isinstance(payload, dict):
+            raise RuntimeError(f"Expected dict payload: '{payload}'")
+
+        return payload
 
     @defer.inlineCallbacks
     def _fetch_rss(self):
