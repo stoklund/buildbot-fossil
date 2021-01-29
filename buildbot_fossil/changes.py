@@ -152,15 +152,15 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
 
     @defer.inlineCallbacks
     def _process_changes(self, changes):
-        fetched = set()
+        fetched = list()
         for ch_dict in changes:
             rev = ch_dict["revision"]
-            fetched.add(rev)
+            fetched.append(rev)
             if rev not in self.last_fetch:
                 # The `src` argument is used to create user objects.
                 # Since buildbot doesn't know about fossil, we pass 'svn'
                 # which has similar user names.
                 yield self.master.data.updates.addChange(src="svn", **ch_dict)
 
-        self.last_fetch = fetched
-        yield self.setState("last_fetch", list(fetched))
+        self.last_fetch = set(fetched)
+        yield self.setState("last_fetch", fetched)

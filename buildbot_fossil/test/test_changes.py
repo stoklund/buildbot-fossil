@@ -197,8 +197,18 @@ class TestRSSFossilPoller(
             "This prevented the built wheel from working correctly on the server.",
         )
 
+        # The change source should save a list of seen revisions.
+        self.master.db.state.assertStateByClass(
+            name=self.REPOURL,
+            class_name="FossilPoller",
+            last_fetch=[
+                "eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24",
+                "fe7bf77289d5b0097b27692f1567bc45308272cf8e3456d1a26efc033cfadafb",
+            ],
+        )
+
     @defer.inlineCallbacks
-    def test_rss_repeat_filter(self):
+    def test_repeat_filter(self):
         """
         Test that duplicates are filtered out.
         """
@@ -209,3 +219,37 @@ class TestRSSFossilPoller(
         yield self.changesource.poll()
         # The two feeds have one item in common.
         self.assertEqual(len(self.master.data.updates.changesAdded), 3)
+
+        # Don't accumulate revisions, just save the ones from the last fetch (RSS2).
+        self.master.db.state.assertStateByClass(
+            name=self.REPOURL,
+            class_name="FossilPoller",
+            last_fetch=[
+                "fdd7d7dcde7a8fea1c50728e511973f630b04daee0297bbeb70a7fb494e44f21",
+                "eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24",
+            ],
+        )
+
+    @defer.inlineCallbacks
+    def test_saved_repeat_filter(self):
+        """
+        Test that the fetched revisions are saved across restarts.
+        """
+        self.master.db.state.fakeState(
+            name=self.REPOURL,
+            class_name="FossilPoller",
+            last_fetch=[
+                "eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24",
+            ],
+        )
+
+        yield self.new_changesource(self.REPOURL)
+        self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS)
+        yield self.start_changesource()
+
+        self.assertEqual(len(self.master.data.updates.changesAdded), 1)
+        chdict = self.master.data.updates.changesAdded[0]
+        self.assertEqual(
+            chdict["revision"],
+            "fe7bf77289d5b0097b27692f1567bc45308272cf8e3456d1a26efc033cfadafb",
+        )
