@@ -193,12 +193,16 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         #
         # See https://fossil-scm.org/home/doc/trunk/www/json-api/api-auth.md#login-anonymous
         anonpw = yield self._json_get("anonymousPassword")
-        login = yield self._json_get(
-            "login",
-            name="anonymous",
-            password=anonpw["password"],
-            anonymousSeed=anonpw["seed"],
+        response = yield self._http.post(
+            "/json/login",
+            json=dict(
+                name="anonymous",
+                password=anonpw["password"],
+                anonymousSeed=anonpw["seed"],
+            ),
         )
+        login = yield self._json_payload(self.repourl + "/json/login", response)
+
         log.info("Logged in as {name}", **login)
 
         # The login response actually comes with a Set-Cookie header, but
@@ -216,10 +220,19 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         """
         path = "/json/" + endpoint
         response = yield self._http.get(path, params=kwargs)
+        payload = yield self._json_payload(self.repourl + path, response)
+        return payload
 
+    @defer.inlineCallbacks
+    def _json_payload(self, url, response):
+        """
+        Extract the payload from a JSON HTTP response.
+
+        Raise exceptions on errors.
+        """
         # JSON API errors still return 200, so this is something else.
         if response.code != HTTPStatus.OK:
-            raise HTTPError(self.repourl + path, response)
+            raise HTTPError(url, response)
 
         # Decode the JSON response envelope.
         renv = yield response.json()
@@ -229,7 +242,6 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         # resultCode is only set for errors.
         resultCode = str(renv.get("resultCode", ""))
         if resultCode:
-            url = self.repourl + path
             # Separate authentication errors so we can login again.
             if resultCode.startswith("FOSSIL-2"):
                 raise JSONAuthError(url, renv)

@@ -491,11 +491,11 @@ class TestJSONFossilPoller(
             params={},
             content_json=self.JSON_ANON_PASSWD,
         )
-        # Then a POST login.
+        # Then a POST login so passwords don't show up in server logs.
         self.http.expect(
-            "get",
+            "post",
             "/json/login",
-            params={
+            json={
                 "name": "anonymous",
                 "password": "8XXXX13b",
                 "anonymousSeed": 1247781448,
