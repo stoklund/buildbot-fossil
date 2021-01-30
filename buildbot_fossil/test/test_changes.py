@@ -438,3 +438,91 @@ class TestJSONFossilPoller(
         )
         yield self.start_changesource()
         self.assertLogged("JSONError: FOSSIL-3002: No subcommand specified.")
+
+    JSON_DENIED = {
+        "fossil": "49f68be83be7de1a7af16edd3dc7c5950fc1be3e764227f1dec33f9862650e42",
+        "timestamp": 1611972492,
+        "resultCode": "FOSSIL-2002",
+        "resultText": "Check-in timeline requires 'h' access.",
+        "command": "timeline/checkin",
+        "procTimeUs": 2761,
+        "procTimeMs": 2,
+    }
+
+    JSON_ANON_PASSWD = {
+        "fossil": "49f68be83be7de1a7af16edd3dc7c5950fc1be3e764227f1dec33f9862650e42",
+        "timestamp": 1611982240,
+        "command": "anonymousPassword",
+        "procTimeUs": 3247,
+        "procTimeMs": 3,
+        "payload": {"seed": 1247781448, "password": "8XXXX13b"},
+    }
+
+    JSON_ANON_OK = {
+        "fossil": "49f68be83be7de1a7af16edd3dc7c5950fc1be3e764227f1dec33f9862650e42",
+        "timestamp": 1611982679,
+        "command": "login",
+        "procTimeUs": 3177,
+        "procTimeMs": 3,
+        "payload": {
+            "authToken": "b7ef6649d551b44b04d4d3ababc/2459244.7069349/anonymous",
+            "name": "anonymous",
+            "capabilities": "hmnc",
+            "loginCookieName": "fossil-42b934f2ab",
+        },
+    }
+
+    @defer.inlineCallbacks
+    def test_json_anonymous_auth(self):
+        """
+        Check that the poller will login as anonymous.
+        """
+        yield self.new_changesource(REPOURL)
+        self.http.expect(
+            "get",
+            "/json/timeline/checkin",
+            params={"files": True},
+            content_json=self.JSON_DENIED,
+        )
+        # After a request with auth denied, get the anonymous password.
+        self.http.expect(
+            "get",
+            "/json/anonymousPassword",
+            params={},
+            content_json=self.JSON_ANON_PASSWD,
+        )
+        # Then a POST login.
+        self.http.expect(
+            "get",
+            "/json/login",
+            params={
+                "name": "anonymous",
+                "password": "8XXXX13b",
+                "anonymousSeed": 1247781448,
+            },
+            content_json=self.JSON_ANON_OK,
+        )
+        self.http.expect(
+            "get",
+            "/json/timeline/checkin",
+            params={"files": True},
+            content_json=self.JSON,
+        )
+
+        yield self.start_changesource()
+        self.assertLogged(
+            "JSONAuthError: FOSSIL-2002: Check-in timeline requires 'h' access"
+        )
+
+        # The fake HTTP service doesn't use the headers provided to __init__ or
+        # updateHeaders(), so just check it here. It's not good to mess with private
+        # members, though.
+        cookie = (
+            "fossil-42b934f2ab=b7ef6649d551b44b04d4d3ababc/2459244.7069349/anonymous"
+        )
+        self.assertEqual(self.http._headers.get("Cookie"), cookie)
+
+        # The login cookie should be saved.
+        self.master.db.state.assertStateByClass(
+            name=REPOURL, class_name="FossilPoller", login_cookie=cookie
+        )

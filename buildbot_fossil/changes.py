@@ -42,6 +42,12 @@ class JSONError(Exception):
         return f"{type(self).__name__}: {code}: {text} (from {self.url})"
 
 
+class JSONAuthError(JSONError):
+    """JSON API authentication errors"""
+
+    pass
+
+
 class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
 
     """This source will poll a remote fossil repo for changes and submit
@@ -107,6 +113,10 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         self.rss = rss
 
         http_headers = {"User-Agent": "Buildbot"}
+        cookie = yield self.getState("login_cookie", None)
+        if cookie:
+            http_headers["Cookie"] = cookie
+
         self._http = yield HTTPClientService.getService(
             self.master, repourl, headers=http_headers
         )
@@ -145,7 +155,12 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         # - files=bool enables the `files` list.
         # - tag|branch=string only sends checkins for a specific branch.
         # See https://fossil-scm.org/home/doc/trunk/www/json-api/api-timeline.md
-        payload = yield self._json_get("timeline/checkin", files=True)
+        try:
+            payload = yield self._json_get("timeline/checkin", files=True)
+        except JSONAuthError as e:
+            log.warn(str(e))
+            yield self._json_login()
+            payload = yield self._json_get("timeline/checkin", files=True)
 
         changes = list()
         for entry in reversed(payload["timeline"]):
@@ -169,17 +184,42 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         return changes
 
     @defer.inlineCallbacks
+    def _json_login(self):
+        """Try logging in with the JSON API"""
+        # Always use the anonymous login procedure. This will usually give us the 'h'
+        # permission necessary for the timeline/checkin endpoint. It's possible to
+        # configure Fossil differently, so we may need to add user/password login in the
+        # future.
+        #
+        # See https://fossil-scm.org/home/doc/trunk/www/json-api/api-auth.md#login-anonymous
+        anonpw = yield self._json_get("anonymousPassword")
+        login = yield self._json_get(
+            "login",
+            name="anonymous",
+            password=anonpw["password"],
+            anonymousSeed=anonpw["seed"],
+        )
+        log.info("Logged in as {name}", **login)
+
+        # The login response actually comes with a Set-Cookie header, but
+        # HTTPClientService doesn't track cookies. We'll set the Cookie header manually.
+        cookie = login["loginCookieName"] + "=" + login["authToken"]
+        self._http.updateHeaders(dict(Cookie=cookie))
+        yield self.setState("login_cookie", cookie)
+
+    @defer.inlineCallbacks
     def _json_get(self, endpoint, **kwargs):
         """
         Make a JSON GET request to /json/{endpoint}.
 
         Returns the returned payload as a dict.
         """
-        response = yield self._http.get("/json/" + endpoint, params=kwargs)
+        path = "/json/" + endpoint
+        response = yield self._http.get(path, params=kwargs)
 
         # JSON API errors still return 200, so this is something else.
         if response.code != HTTPStatus.OK:
-            raise HTTPError(f"{self.repourl}/json/{endpoint}", response)
+            raise HTTPError(self.repourl + path, response)
 
         # Decode the JSON response envelope.
         renv = yield response.json()
@@ -189,7 +229,12 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         # resultCode is only set for errors.
         resultCode = str(renv.get("resultCode", ""))
         if resultCode:
-            raise JSONError(f"{self.repourl}/json/{endpoint}", renv)
+            url = self.repourl + path
+            # Separate authentication errors so we can login again.
+            if resultCode.startswith("FOSSIL-2"):
+                raise JSONAuthError(url, renv)
+            else:
+                raise JSONError(url, renv)
 
         payload = renv.get("payload", {})
         if not isinstance(payload, dict):
