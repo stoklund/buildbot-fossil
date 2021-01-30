@@ -98,59 +98,71 @@ class TestRSSFossilPoller(
             yield self.new_changesource(REPOURL)
 
     RSS = """<?xml version="1.0"?>
-        <rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
-          <channel>
-            <title>Buildbot-fossil</title>
-            <link>http://fossil.local/buildbot-fossil</link>
-            <description>Fossil plugin for Buildbot</description>
-            <pubDate>Fri, 29 Jan 2021 01:19:34 +0000</pubDate>
-            <generator>Fossil version [49f68be83b] 2021-01-02 13:39:46</generator>
-            <item>
-              <title>Remove the path dependency on buildbot. This prevented the built wheel from working correctly on the server. (tags: trunk)</title>
-              <link>http://fossil.local/buildbot-fossil/info/fe7bf77289d5b0097b27692f1567bc45308272cf8e3456d1a26efc033cfadafb</link>
-              <description>Remove the path dependency on buildbot. This prevented the built wheel from working correctly on the server. (tags: trunk)</description>
-              <pubDate>Mon, 18 Jan 2021 01:05:58 +0000</pubDate>
-              <dc:creator>jolesen</dc:creator>
-              <guid>http://fossil.local/buildbot-fossil/info/fe7bf77289d5b0097b27692f1567bc45308272cf8e3456d1a26efc033cfadafb</guid>
-            </item>
-            <item>
-              <title>*MERGE* Test logging, merge poetry (tags: trunk)</title>
-              <link>http://fossil.local/buildbot-fossil/info/eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</link>
-              <description>*MERGE* Test logging, merge poetry (tags: trunk)</description>
-              <pubDate>Sun, 10 Jan 2021 18:44:36 +0000</pubDate>
-              <dc:creator>jolesen</dc:creator>
-              <guid>http://fossil.local/buildbot-fossil/info/eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</guid>
-            </item>
-          </channel>
-        </rss>
+<rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+  <channel>
+    <title>Buildbot-fossil</title>
+    <link>http://fossil.local/buildbot-fossil</link>
+    <description>Fossil plugin for Buildbot</description>
+    <pubDate>Fri, 29 Jan 2021 01:19:34 +0000</pubDate>
+    <generator>Fossil version [49f68be83b] 2021-01-02 13:39:46</generator>
+    <item>
+      <title>Remove the path dependency on buildbot. \
+This prevented the built wheel from working correctly on the server. \
+(tags: trunk)</title>
+      <link>http://fossil.local/buildbot-fossil/info/\
+fe7bf77289d5b0097b27692f1567bc45308272cf8e3456d1a26efc033cfadafb</link>
+      <description>Remove the path dependency on buildbot. \
+This prevented the built wheel from working correctly on the server. \
+(tags: trunk)</description>
+      <pubDate>Mon, 18 Jan 2021 01:05:58 +0000</pubDate>
+      <dc:creator>jolesen</dc:creator>
+      <guid>http://fossil.local/buildbot-fossil/info/\
+fe7bf77289d5b0097b27692f1567bc45308272cf8e3456d1a26efc033cfadafb</guid>
+    </item>
+    <item>
+      <title>*MERGE* Test logging, merge poetry (tags: trunk)</title>
+      <link>http://fossil.local/buildbot-fossil/info/\
+eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</link>
+      <description>*MERGE* Test logging, merge poetry (tags: trunk)</description>
+      <pubDate>Sun, 10 Jan 2021 18:44:36 +0000</pubDate>
+      <dc:creator>jolesen</dc:creator>
+      <guid>http://fossil.local/buildbot-fossil/info/\
+eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</guid>
+    </item>
+  </channel>
+</rss>
     """
 
     RSS2 = """<?xml version="1.0"?>
-        <rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
-          <channel>
-            <title>Buildbot-fossil</title>
-            <link>http://fossil.local/buildbot-fossil</link>
-            <description>Fossil plugin for Buildbot</description>
-            <pubDate>Fri, 29 Jan 2021 01:19:34 +0000</pubDate>
-            <generator>Fossil version [49f68be83b] 2021-01-02 13:39:46</generator>
-            <item>
-              <title>*MERGE* Test logging, merge poetry (tags: trunk)</title>
-              <link>http://fossil.local/buildbot-fossil/info/eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</link>
-              <description>*MERGE* Test logging, merge poetry (tags: trunk)</description>
-              <pubDate>Sun, 10 Jan 2021 18:44:36 +0000</pubDate>
-              <dc:creator>jolesen</dc:creator>
-              <guid>http://fossil.local/buildbot-fossil/info/eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</guid>
-            </item>
-            <item>
-              <title>*FORK* Test for missing HTTP service (tags: trunk)</title>
-              <link>http://fossil.local/buildbot-fossil/info/fdd7d7dcde7a8fea1c50728e511973f630b04daee0297bbeb70a7fb494e44f21</link>
-              <description>*FORK* Test for missing HTTP service (tags: trunk)</description>
-              <pubDate>Sat, 9 Jan 2021 01:41:38 +0000</pubDate>
-              <dc:creator>jolesen</dc:creator>
-              <guid>http://fossil.local/buildbot-fossil/info/fdd7d7dcde7a8fea1c50728e511973f630b04daee0297bbeb70a7fb494e44f21</guid>
-            </item>
-          </channel>
-        </rss>
+<rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+  <channel>
+    <title>Buildbot-fossil</title>
+    <link>http://fossil.local/buildbot-fossil</link>
+    <description>Fossil plugin for Buildbot</description>
+    <pubDate>Fri, 29 Jan 2021 01:19:34 +0000</pubDate>
+    <generator>Fossil version [49f68be83b] 2021-01-02 13:39:46</generator>
+    <item>
+      <title>*MERGE* Test logging, merge poetry (tags: trunk)</title>
+      <link>http://fossil.local/buildbot-fossil/info/\
+eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</link>
+      <description>*MERGE* Test logging, merge poetry (tags: trunk)</description>
+      <pubDate>Sun, 10 Jan 2021 18:44:36 +0000</pubDate>
+      <dc:creator>jolesen</dc:creator>
+      <guid>http://fossil.local/buildbot-fossil/info/\
+eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</guid>
+    </item>
+    <item>
+      <title>*FORK* Test for missing HTTP service (tags: trunk)</title>
+      <link>http://fossil.local/buildbot-fossil/info/\
+fdd7d7dcde7a8fea1c50728e511973f630b04daee0297bbeb70a7fb494e44f21</link>
+      <description>*FORK* Test for missing HTTP service (tags: trunk)</description>
+      <pubDate>Sat, 9 Jan 2021 01:41:38 +0000</pubDate>
+      <dc:creator>jolesen</dc:creator>
+      <guid>http://fossil.local/buildbot-fossil/info/\
+fdd7d7dcde7a8fea1c50728e511973f630b04daee0297bbeb70a7fb494e44f21</guid>
+    </item>
+  </channel>
+</rss>
     """
 
     @defer.inlineCallbacks
@@ -289,6 +301,7 @@ class TestJSONFossilPoller(
         """Start the change source service running"""
         yield self.attachChangeSource(self.changesource)
 
+    # pylint: disable=line-too-long
     JSON = {
         "fossil": "a54732919d8ed1ba3adf0b5032f430da8a0c8883dcdb1affe1666613a236463b",
         "timestamp": 1611945181,
@@ -514,13 +527,9 @@ class TestJSONFossilPoller(
             "JSONAuthError: FOSSIL-2002: Check-in timeline requires 'h' access"
         )
 
-        # The fake HTTP service doesn't use the headers provided to __init__ or
-        # updateHeaders(), so just check it here. It's not good to mess with private
-        # members, though.
         cookie = (
             "fossil-42b934f2ab=b7ef6649d551b44b04d4d3ababc/2459244.7069349/anonymous"
         )
-        self.assertEqual(self.http._headers.get("Cookie"), cookie)
 
         # The login cookie should be saved.
         self.master.db.state.assertStateByClass(

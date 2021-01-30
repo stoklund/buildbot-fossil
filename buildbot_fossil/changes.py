@@ -24,6 +24,7 @@ class HTTPError(Exception):
         self.url = url
         self.response = response
         self.status = HTTPStatus(response.code)
+        super().__init__()
 
     def __str__(self):
         return f"{self.status!s} {self.url}"
@@ -35,6 +36,7 @@ class JSONError(Exception):
     def __init__(self, url, envelope):
         self.url = url
         self.envelope = envelope
+        super().__init__()
 
     def __str__(self):
         code = self.envelope["resultCode"]
@@ -45,7 +47,36 @@ class JSONError(Exception):
 class JSONAuthError(JSONError):
     """JSON API authentication errors"""
 
-    pass
+
+@defer.inlineCallbacks
+def json_payload(url, response):
+    """
+    Extract the payload from a JSON HTTP response.
+
+    Raise exceptions on errors.
+    """
+    # JSON API errors still return 200, so this is something else.
+    if response.code != HTTPStatus.OK:
+        raise HTTPError(url, response)
+
+    # Decode the JSON response envelope.
+    renv = yield response.json()
+    if "fossil" not in renv:
+        raise RuntimeError("JSON response is not from a Fossil server", renv)
+
+    # resultCode is only set for errors.
+    code = renv.get("resultCode", "")
+    if code:
+        # Separate authentication errors so we can login again.
+        if code.startswith("FOSSIL-2"):
+            raise JSONAuthError(url, renv)
+        raise JSONError(url, renv)
+
+    payload = renv.get("payload", {})
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"Expected dict payload: '{payload}'")
+
+    return payload
 
 
 class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
@@ -98,7 +129,7 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
     def checkConfig(self, repourl, rss=False, **kwargs):
         if repourl.endswith("/"):
             config.error("repourl must not end in /")
-        if not rss in (True, False):
+        if rss not in (True, False):
             config.error("The `rss` parameter must be True or False")
 
         HTTPClientService.checkAvailable(self.__class__.__name__)
@@ -146,8 +177,8 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
 
             yield self._process_changes(changes)
 
-        except (HTTPError, JSONError) as e:
-            log.error(str(e))
+        except (HTTPError, JSONError) as exc:
+            log.error(str(exc))
 
     @defer.inlineCallbacks
     def _fetch_json(self):
@@ -157,8 +188,8 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         # See https://fossil-scm.org/home/doc/trunk/www/json-api/api-timeline.md
         try:
             payload = yield self._json_get("timeline/checkin", files=True)
-        except JSONAuthError as e:
-            log.warn(str(e))
+        except JSONAuthError as exc:
+            log.info(str(exc))
             yield self._json_login()
             payload = yield self._json_get("timeline/checkin", files=True)
 
@@ -201,7 +232,7 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
                 anonymousSeed=anonpw["seed"],
             ),
         )
-        login = yield self._json_payload(self.repourl + "/json/login", response)
+        login = yield json_payload(self.repourl + "/json/login", response)
 
         log.info("Logged in as {name}", **login)
 
@@ -220,38 +251,7 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         """
         path = "/json/" + endpoint
         response = yield self._http.get(path, params=kwargs)
-        payload = yield self._json_payload(self.repourl + path, response)
-        return payload
-
-    @defer.inlineCallbacks
-    def _json_payload(self, url, response):
-        """
-        Extract the payload from a JSON HTTP response.
-
-        Raise exceptions on errors.
-        """
-        # JSON API errors still return 200, so this is something else.
-        if response.code != HTTPStatus.OK:
-            raise HTTPError(url, response)
-
-        # Decode the JSON response envelope.
-        renv = yield response.json()
-        if "fossil" not in renv:
-            raise RuntimeError("JSON response is not from a Fossil server", renv)
-
-        # resultCode is only set for errors.
-        resultCode = str(renv.get("resultCode", ""))
-        if resultCode:
-            # Separate authentication errors so we can login again.
-            if resultCode.startswith("FOSSIL-2"):
-                raise JSONAuthError(url, renv)
-            else:
-                raise JSONError(url, renv)
-
-        payload = renv.get("payload", {})
-        if not isinstance(payload, dict):
-            raise RuntimeError(f"Expected dict payload: '{payload}'")
-
+        payload = yield json_payload(self.repourl + path, response)
         return payload
 
     @defer.inlineCallbacks
