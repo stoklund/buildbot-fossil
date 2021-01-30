@@ -386,7 +386,10 @@ class TestJSONFossilPoller(
         self.assertEqual(chdict["revlink"], f"{REPOURL}/info/{rev}")
         self.assertEqual(chdict["branch"], "trunk")
         self.assertEqual(chdict["repository"], REPOURL)
-        # TODO: self.assertIsNone(chdict["files"])
+        self.assertEqual(chdict["files"], [
+            "buildbot_fossil/changes.py",
+            "buildbot_fossil/test/test_changes.py"
+        ])
         self.assertEqual(
             chdict["comments"],
             "Test the filter for repeated revisions. Make the saved list order consistent.",
@@ -398,3 +401,17 @@ class TestJSONFossilPoller(
             chdict["revision"],
             "c4da1011eed6e7ac8c84f7bbd4f23c80af4638bc230da1926587f01381713316",
         )
+
+    @defer.inlineCallbacks
+    def test_no_json_configured(self):
+        """
+        A fossil server that hasn't been configured with JSON will return HTTP 404.
+        """
+        yield self.new_changesource(REPOURL)
+        self.http.expect(
+            "get",
+            "/json/timeline/checkin",
+            params={"files": True},
+            code=404)
+        yield self.start_changesource()
+        self.assertLogged(f"HTTPStatus.NOT_FOUND {REPOURL}/json/timeline/checkin")

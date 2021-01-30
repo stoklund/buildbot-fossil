@@ -1,5 +1,6 @@
 """Polling Fossil for source changes"""
 
+from http import HTTPStatus
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime
@@ -14,6 +15,16 @@ from twisted.internet import defer
 
 log = Logger()
 XMLNS_MAP = dict(dc="http://purl.org/dc/elements/1.1/")
+
+
+class HTTPError(Exception):
+    def __init__(self, url, response):
+        self.url = url
+        self.response = response
+        self.status = HTTPStatus(response.code)
+
+    def __str__(self):
+        return f"{self.status!s} {self.url}"
 
 
 class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
@@ -102,11 +113,16 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
 
     @defer.inlineCallbacks
     def poll(self):
-        if not self.rss:
-            changes = yield self._fetch_json()
-        else:
-            changes = yield self._fetch_rss()
-        yield self._process_changes(changes)
+        try:
+            if not self.rss:
+                changes = yield self._fetch_json()
+            else:
+                changes = yield self._fetch_rss()
+
+            yield self._process_changes(changes)
+
+        except HTTPError as e:
+            log.error(str(e))
 
     @defer.inlineCallbacks
     def _fetch_json(self):
@@ -145,15 +161,10 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         Returns the returned payload as a dict.
         """
         response = yield self._http.get("/json/" + endpoint, params=kwargs)
-        if response.code != 200:
-            log.error(
-                "JSON request to {url}/json/{endpoint} returned "
-                "HTTP status {response.code}",
-                url=self.repourl,
-                endpoint=endpoint,
-                response=response,
-            )
-            raise RuntimeError(f"HTTP {response.code} from {self.repourl}/json")
+
+        # JSON API errors still return 200, so this is something else.
+        if response.code != HTTPStatus.OK:
+            raise HTTPError(f"{self.repourl}/json/{endpoint}", response)
 
         # Decode the JSON response envelope.
         renv = yield response.json()
