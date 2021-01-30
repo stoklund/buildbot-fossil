@@ -386,10 +386,10 @@ class TestJSONFossilPoller(
         self.assertEqual(chdict["revlink"], f"{REPOURL}/info/{rev}")
         self.assertEqual(chdict["branch"], "trunk")
         self.assertEqual(chdict["repository"], REPOURL)
-        self.assertEqual(chdict["files"], [
-            "buildbot_fossil/changes.py",
-            "buildbot_fossil/test/test_changes.py"
-        ])
+        self.assertEqual(
+            chdict["files"],
+            ["buildbot_fossil/changes.py", "buildbot_fossil/test/test_changes.py"],
+        )
         self.assertEqual(
             chdict["comments"],
             "Test the filter for repeated revisions. Make the saved list order consistent.",
@@ -409,9 +409,32 @@ class TestJSONFossilPoller(
         """
         yield self.new_changesource(REPOURL)
         self.http.expect(
+            "get", "/json/timeline/checkin", params={"files": True}, code=404
+        )
+        yield self.start_changesource()
+        self.assertLogged(f"HTTPStatus.NOT_FOUND {REPOURL}/json/timeline/checkin")
+
+    JSON_ERROR = {
+        "fossil": "49f68be83be7de1a7af16edd3dc7c5950fc1be3e764227f1dec33f9862650e42",
+        "timestamp": 1611972492,
+        "resultCode": "FOSSIL-3002",
+        "resultText": "No subcommand specified.",
+        "command": "timeline",
+        "procTimeUs": 2761,
+        "procTimeMs": 2,
+    }
+
+    @defer.inlineCallbacks
+    def test_json_error(self):
+        """
+        Check handling of some unexpected JSON API error.
+        """
+        yield self.new_changesource(REPOURL)
+        self.http.expect(
             "get",
             "/json/timeline/checkin",
             params={"files": True},
-            code=404)
+            content_json=self.JSON_ERROR,
+        )
         yield self.start_changesource()
-        self.assertLogged(f"HTTPStatus.NOT_FOUND {REPOURL}/json/timeline/checkin")
+        self.assertLogged("JSONError: FOSSIL-3002: No subcommand specified.")

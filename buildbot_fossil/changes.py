@@ -18,6 +18,8 @@ XMLNS_MAP = dict(dc="http://purl.org/dc/elements/1.1/")
 
 
 class HTTPError(Exception):
+    """HTTP-level error"""
+
     def __init__(self, url, response):
         self.url = url
         self.response = response
@@ -25,6 +27,19 @@ class HTTPError(Exception):
 
     def __str__(self):
         return f"{self.status!s} {self.url}"
+
+
+class JSONError(Exception):
+    """JSON API error"""
+
+    def __init__(self, url, envelope):
+        self.url = url
+        self.envelope = envelope
+
+    def __str__(self):
+        code = self.envelope["resultCode"]
+        text = self.envelope.get("resultText", "")
+        return f"{type(self).__name__}: {code}: {text} (from {self.url})"
 
 
 class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
@@ -121,7 +136,7 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
 
             yield self._process_changes(changes)
 
-        except HTTPError as e:
+        except (HTTPError, JSONError) as e:
             log.error(str(e))
 
     @defer.inlineCallbacks
@@ -174,9 +189,7 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         # resultCode is only set for errors.
         resultCode = str(renv.get("resultCode", ""))
         if resultCode:
-            if resultCode.startswith("FOSSIL-"):
-                return resultCode
-            raise RuntimeError(f"Invalid resultCode '{resultCode}'")
+            raise JSONError(f"{self.repourl}/json/{endpoint}", renv)
 
         payload = renv.get("payload", {})
         if not isinstance(payload, dict):
