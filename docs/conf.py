@@ -19,6 +19,7 @@ author = "Jakob Stoklund Olesen"
 
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
     "sphinx.ext.todo",
 ]
 
@@ -26,6 +27,7 @@ templates_path = ["_templates"]
 
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
+autoclass_content = "init"
 
 # -- Options for HTML output -------------------------------------------------
 

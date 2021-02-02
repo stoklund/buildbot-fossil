@@ -1,6 +1,7 @@
 """Fossil source build step"""
 
 import re
+from typing import Optional
 
 from buildbot import config
 from buildbot.interfaces import WorkerSetupError
@@ -11,14 +12,47 @@ from twisted.internet import defer
 
 
 class Fossil(Source):
-
-    """Check out a revision from the Fossil SCM"""
-
     name = "fossil"
 
-    possible_methods = ("clean", "copy", "clobber")
+    possible_methods = ("fresh", "copy", "clobber")
 
-    def __init__(self, repourl=None, mode="incremental", method=None, **kwargs):
+    def __init__(
+        self,
+        repourl: str = None,
+        mode: str = "incremental",
+        method: Optional[str] = None,
+        **kwargs
+    ):
+        """
+        Check out a revision from the Fossil SCM.
+
+        Parameters
+        ----------
+        repourl
+            URL of the upstream Fossil repository. This can be any URL supported by
+            :command:`fossil clone`.
+
+        Keyword Arguments
+        -----------------
+        mode
+            One of "full" or "incremental". In the default "incremental" mode, build files
+            are left in place in the `workdir`, and only :command:`fossil revert` is used to
+            clean up before :command:`fossil update` checks out the new revision. This
+            enables fast, incremental builds. In "full" mode, the `workdir` is cleaned up
+            more thoroughly as specified by the `method` parameter.
+
+        method
+            How to clean up the workdir in "full" mode. One of "fresh", "copy", or
+            "clobber":
+
+            - The "fresh" method runs :command:`fossil clean --verily` to delete all
+              unversioned files in `workdir`.
+            - The "copy" method deletes the entire `workdir` directory tree and makes a new
+              checkout from the cloned `{workdir}.fossil` repository.
+            - The "clobber" method deletes both the cloned repository and the `workdir` and
+              starts over with a new clone from `repourl`.
+        """
+
         self.repourl = repourl
         self.mode = mode
         self.method = method
@@ -129,7 +163,7 @@ class Fossil(Source):
 
         # Clean can fail if the workdir isn't a proper checkout,
         # or if it is in a very bad state. Fall back to 'copy'
-        if method == "clean":
+        if method == "fresh":
             cmd = yield self.fossil("clean", "--verily")
             if cmd.results() == SUCCESS:
                 cmd = yield self.fossil("revert")

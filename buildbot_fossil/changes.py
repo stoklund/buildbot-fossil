@@ -1,9 +1,10 @@
 """Polling Fossil for source changes"""
 
-from http import HTTPStatus
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime
+from http import HTTPStatus
+from typing import Optional
 
 from buildbot import config
 from buildbot.changes import base
@@ -18,7 +19,7 @@ XMLNS_MAP = dict(dc="http://purl.org/dc/elements/1.1/")
 
 
 class HTTPError(Exception):
-    """HTTP-level error"""
+    """HTTP-level error."""
 
     def __init__(self, url, response):
         self.url = url
@@ -31,7 +32,7 @@ class HTTPError(Exception):
 
 
 class JSONError(Exception):
-    """JSON API error"""
+    """JSON API error."""
 
     def __init__(self, url, envelope):
         self.url = url
@@ -45,7 +46,7 @@ class JSONError(Exception):
 
 
 class JSONAuthError(JSONError):
-    """JSON API authentication errors"""
+    """JSON API authentication errors."""
 
 
 @defer.inlineCallbacks
@@ -80,10 +81,6 @@ def json_payload(url, response):
 
 
 class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
-
-    """This source will poll a remote fossil repo for changes and submit
-    them to the change master."""
-
     compare_attrs = (
         "repourl",
         "rss",
@@ -97,15 +94,47 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
 
     def __init__(
         self,
-        repourl,
-        rss=False,
-        name=None,
-        pollInterval=10 * 60,
-        pollAtLaunch=True,
-        pollRandomDelayMin=0,
-        pollRandomDelayMax=0,
+        repourl: str,
+        rss: bool = False,
+        name: Optional[str] = None,
+        pollInterval: int = 10 * 60,
+        pollAtLaunch: bool = False,
+        pollRandomDelayMin: int = 0,
+        pollRandomDelayMax: int = 0,
     ):
-        """Create a Fossil SCM poller."""
+        """
+        Fossil SCM poller.
+
+        Regularly check the Fossil repository at `repourl` for new commits and
+        submit them to the Buildbot master.
+
+        Parameters
+        ----------
+        repourl
+            Base URL of the Fossil repository without a trailing `/`. Only HTTP and
+            HTTPS URLs are supported.
+
+        rss
+            Use `{repourl}/timeline.rss` instead of Fossil's JSON API to get new commits.
+            JSON is preferred (and default) because RSS does not provide a list of changed
+            files in a commit, but JSON support is not always configured in the Fossil
+            server.
+
+        name
+            The name of the poller defaults to `repourl`, but can be changed with this
+            parameter. This name is also used by Buildbot's `/change_hook/poller` hook.
+
+        pollInterval
+            Interval between polls, in seconds.
+
+        pollAtLaunch
+            Poll immediately at launch instead of waiting a poll interval before the first
+            poll.
+
+        pollRandomDelayMin, pollRandomDelayMax
+            Set to randomize the polling interval to even out the load if there are many
+            pollers to the same repository.
+        """
         if name is None:
             name = repourl
 
