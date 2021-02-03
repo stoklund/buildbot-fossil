@@ -10,7 +10,7 @@ disable = """
 
 [tool.poetry]
 name = "buildbot-fossil"
-version = "0.2.0-alpha.0"
+version = "0.2"
 description = "Fossil version control plugin for Buildbot"
 license = "GPL-2.0-only"
 authors = ["Jakob Stoklund Olesen <stoklund@2pi.dk>"]
@@ -20,7 +20,7 @@ repository = "https://github.com/stoklund/buildbot-fossil"
 documentation = "https://buildbot-fossil.readthedocs.io/"
 keywords = ["Buildbot", "Fossil SCM"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Build Tools",
     "Topic :: Software Development :: Testing",
