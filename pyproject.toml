@@ -43,6 +43,7 @@ mock = "^4.0.3"
 pylint = "^2.6.0"
 Sphinx = "^3.4.3"
 sphinx-autobuild = "^2020.9.1"
+sphinx-rtd-theme = "^0.5.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
