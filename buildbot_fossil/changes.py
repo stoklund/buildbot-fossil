@@ -254,13 +254,18 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         # See https://fossil-scm.org/home/doc/trunk/www/json-api/api-auth.md#login-anonymous
         log.info("Getting anonymous passsword for {repourl}", repourl=self.repourl)
         anonpw = yield self._json_get("anonymousPassword")
-        log.info("Got anonymous password='{password}', seed={seed}", **anonpw)
-        login = yield self._json_get(
-            "login",
-            name="anonymous",
-            password=anonpw["password"],
-            anonymousSeed=anonpw["seed"],
+        log.info("Got anonymous password and seed={seed}", **anonpw)
+        response = yield self._http.post(
+            "/json/login",
+            json={
+                "payload": {
+                    "name": "anonymous",
+                    "password": anonpw["password"],
+                    "anonymousSeed": anonpw["seed"],
+                }
+            },
         )
+        login = yield json_payload(self.repourl + "/json/login", response)
         log.info("Logged in as {name} with cookie {loginCookieName}", **login)
 
         # The login response actually comes with a Set-Cookie header, but
