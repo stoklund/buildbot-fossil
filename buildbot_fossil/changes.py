@@ -252,6 +252,7 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         # future.
         #
         # See https://fossil-scm.org/home/doc/trunk/www/json-api/api-auth.md#login-anonymous
+        log.info("Getting anonymous passsword for {repourl}", repourl=self.repourl)
         anonpw = yield self._json_get("anonymousPassword")
         response = yield self._http.post(
             "/json/login",

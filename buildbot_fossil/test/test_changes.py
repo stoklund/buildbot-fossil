@@ -72,7 +72,7 @@ class TestRSSFossilPoller(
         """
         The describe() method can provide more info
         """
-        yield self.new_changesource("nowhere")
+        yield self.new_changesource("nowhere", pollAtLaunch=True)
         self.assertEqual(
             "FossilPoller watching 'nowhere' [STOPPED - check log]",
             self.changesource.describe(),
@@ -97,72 +97,62 @@ class TestRSSFossilPoller(
         with self.assertRaises(RuntimeError):
             yield self.new_changesource(REPOURL)
 
+    # pylint: disable=line-too-long
     RSS = """<?xml version="1.0"?>
-<rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
-  <channel>
-    <title>Buildbot-fossil</title>
-    <link>http://fossil.local/buildbot-fossil</link>
-    <description>Fossil plugin for Buildbot</description>
-    <pubDate>Fri, 29 Jan 2021 01:19:34 +0000</pubDate>
-    <generator>Fossil version [49f68be83b] 2021-01-02 13:39:46</generator>
-    <item>
-      <title>Remove the path dependency on buildbot. \
-This prevented the built wheel from working correctly on the server. \
-(tags: trunk)</title>
-      <link>http://fossil.local/buildbot-fossil/info/\
-fe7bf77289d5b0097b27692f1567bc45308272cf8e3456d1a26efc033cfadafb</link>
-      <description>Remove the path dependency on buildbot. \
-This prevented the built wheel from working correctly on the server. \
-(tags: trunk)</description>
-      <pubDate>Mon, 18 Jan 2021 01:05:58 +0000</pubDate>
-      <dc:creator>jolesen</dc:creator>
-      <guid>http://fossil.local/buildbot-fossil/info/\
-fe7bf77289d5b0097b27692f1567bc45308272cf8e3456d1a26efc033cfadafb</guid>
-    </item>
-    <item>
-      <title>*MERGE* Test logging, merge poetry (tags: trunk)</title>
-      <link>http://fossil.local/buildbot-fossil/info/\
-eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</link>
-      <description>*MERGE* Test logging, merge poetry (tags: trunk)</description>
-      <pubDate>Sun, 10 Jan 2021 18:44:36 +0000</pubDate>
-      <dc:creator>jolesen</dc:creator>
-      <guid>http://fossil.local/buildbot-fossil/info/\
-eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</guid>
-    </item>
-  </channel>
-</rss>
+    <rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+      <channel>
+        <title>Buildbot-fossil</title>
+        <link>http://fossil.local/buildbot-fossil</link>
+        <description>Fossil plugin for Buildbot</description>
+        <pubDate>Fri, 29 Jan 2021 01:19:34 +0000</pubDate>
+        <generator>Fossil version [49f68be83b] 2021-01-02 13:39:46</generator>
+        <item>
+          <title>Remove the path dependency on buildbot. This prevented the built wheel from working correctly on the server. (tags: trunk)</title>
+          <link>http://fossil.local/buildbot-fossil/info/fe7bf77289d5b0097b27692f1567bc45308272cf8e3456d1a26efc033cfadafb</link>
+          <description>Remove the path dependency on buildbot. This prevented the built wheel from working correctly on the server. (tags: trunk)</description>
+          <pubDate>Mon, 18 Jan 2021 01:05:58 +0000</pubDate>
+          <dc:creator>jolesen</dc:creator>
+          <guid>http://fossil.local/buildbot-fossil/info/fe7bf77289d5b0097b27692f1567bc45308272cf8e3456d1a26efc033cfadafb</guid>
+        </item>
+        <item>
+          <title>*MERGE* Test logging, merge poetry (tags: trunk)</title>
+          <link>http://fossil.local/buildbot-fossil/info/eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</link>
+          <description>*MERGE* Test logging, merge poetry (tags: trunk)</description>
+          <pubDate>Sun, 10 Jan 2021 18:44:36 +0000</pubDate>
+          <dc:creator>jolesen</dc:creator>
+          <guid>http://fossil.local/buildbot-fossil/info/eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</guid>
+        </item>
+      </channel>
+    </rss>
     """
 
+    # pylint: disable=line-too-long
     RSS2 = """<?xml version="1.0"?>
-<rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
-  <channel>
-    <title>Buildbot-fossil</title>
-    <link>http://fossil.local/buildbot-fossil</link>
-    <description>Fossil plugin for Buildbot</description>
-    <pubDate>Fri, 29 Jan 2021 01:19:34 +0000</pubDate>
-    <generator>Fossil version [49f68be83b] 2021-01-02 13:39:46</generator>
-    <item>
-      <title>*MERGE* Test logging, merge poetry (tags: trunk)</title>
-      <link>http://fossil.local/buildbot-fossil/info/\
-eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</link>
-      <description>*MERGE* Test logging, merge poetry (tags: trunk)</description>
-      <pubDate>Sun, 10 Jan 2021 18:44:36 +0000</pubDate>
-      <dc:creator>jolesen</dc:creator>
-      <guid>http://fossil.local/buildbot-fossil/info/\
-eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</guid>
-    </item>
-    <item>
-      <title>*FORK* Test for missing HTTP service (tags: trunk)</title>
-      <link>http://fossil.local/buildbot-fossil/info/\
-fdd7d7dcde7a8fea1c50728e511973f630b04daee0297bbeb70a7fb494e44f21</link>
-      <description>*FORK* Test for missing HTTP service (tags: trunk)</description>
-      <pubDate>Sat, 9 Jan 2021 01:41:38 +0000</pubDate>
-      <dc:creator>jolesen</dc:creator>
-      <guid>http://fossil.local/buildbot-fossil/info/\
-fdd7d7dcde7a8fea1c50728e511973f630b04daee0297bbeb70a7fb494e44f21</guid>
-    </item>
-  </channel>
-</rss>
+    <rss xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+      <channel>
+        <title>Buildbot-fossil</title>
+        <link>http://fossil.local/buildbot-fossil</link>
+        <description>Fossil plugin for Buildbot</description>
+        <pubDate>Fri, 29 Jan 2021 01:19:34 +0000</pubDate>
+        <generator>Fossil version [49f68be83b] 2021-01-02 13:39:46</generator>
+        <item>
+          <title>*MERGE* Test logging, merge poetry (tags: trunk)</title>
+          <link>http://fossil.local/buildbot-fossil/info/eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</link>
+          <description>*MERGE* Test logging, merge poetry (tags: trunk)</description>
+          <pubDate>Sun, 10 Jan 2021 18:44:36 +0000</pubDate>
+          <dc:creator>jolesen</dc:creator>
+          <guid>http://fossil.local/buildbot-fossil/info/eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24</guid>
+        </item>
+        <item>
+          <title>*FORK* Test for missing HTTP service (tags: trunk)</title>
+          <link>http://fossil.local/buildbot-fossil/info/fdd7d7dcde7a8fea1c50728e511973f630b04daee0297bbeb70a7fb494e44f21</link>
+          <description>*FORK* Test for missing HTTP service (tags: trunk)</description>
+          <pubDate>Sat, 9 Jan 2021 01:41:38 +0000</pubDate>
+          <dc:creator>jolesen</dc:creator>
+          <guid>http://fossil.local/buildbot-fossil/info/fdd7d7dcde7a8fea1c50728e511973f630b04daee0297bbeb70a7fb494e44f21</guid>
+        </item>
+      </channel>
+    </rss>
     """
 
     @defer.inlineCallbacks
@@ -170,7 +160,7 @@ fdd7d7dcde7a8fea1c50728e511973f630b04daee0297bbeb70a7fb494e44f21</guid>
         """
         Check that we can extract change entries from an RSS feed.
         """
-        yield self.new_changesource(REPOURL)
+        yield self.new_changesource(REPOURL, pollAtLaunch=True)
         self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS)
         yield self.start_changesource()
 
@@ -224,7 +214,7 @@ fdd7d7dcde7a8fea1c50728e511973f630b04daee0297bbeb70a7fb494e44f21</guid>
         """
         Test that duplicates are filtered out.
         """
-        yield self.new_changesource(REPOURL)
+        yield self.new_changesource(REPOURL, pollAtLaunch=True)
         self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS)
         self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS2)
         yield self.start_changesource()
@@ -255,7 +245,7 @@ fdd7d7dcde7a8fea1c50728e511973f630b04daee0297bbeb70a7fb494e44f21</guid>
             ],
         )
 
-        yield self.new_changesource(REPOURL)
+        yield self.new_changesource(REPOURL, pollAtLaunch=True)
         self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS)
         yield self.start_changesource()
 
@@ -380,7 +370,7 @@ class TestJSONFossilPoller(
         """
         Check a simple JSON fetch, assuming we're already logged in.
         """
-        yield self.new_changesource(REPOURL)
+        yield self.new_changesource(REPOURL, pollAtLaunch=True)
         self.http.expect(
             "get",
             "/json/timeline/checkin",
@@ -420,7 +410,7 @@ class TestJSONFossilPoller(
         """
         A fossil server that hasn't been configured with JSON will return HTTP 404.
         """
-        yield self.new_changesource(REPOURL)
+        yield self.new_changesource(REPOURL, pollAtLaunch=True)
         self.http.expect(
             "get", "/json/timeline/checkin", params={"files": True}, code=404
         )
@@ -442,7 +432,7 @@ class TestJSONFossilPoller(
         """
         Check handling of some unexpected JSON API error.
         """
-        yield self.new_changesource(REPOURL)
+        yield self.new_changesource(REPOURL, pollAtLaunch=True)
         self.http.expect(
             "get",
             "/json/timeline/checkin",
@@ -490,7 +480,7 @@ class TestJSONFossilPoller(
         """
         Check that the poller will login as anonymous.
         """
-        yield self.new_changesource(REPOURL)
+        yield self.new_changesource(REPOURL, pollAtLaunch=True)
         self.http.expect(
             "get",
             "/json/timeline/checkin",
@@ -526,6 +516,8 @@ class TestJSONFossilPoller(
         self.assertLogged(
             "JSONAuthError: FOSSIL-2002: Check-in timeline requires 'h' access"
         )
+        self.assertLogged(f"Getting anonymous passsword for {REPOURL}")
+        self.assertLogged("Logged in as anonymous")
 
         cookie = (
             "fossil-42b934f2ab=b7ef6649d551b44b04d4d3ababc/2459244.7069349/anonymous"

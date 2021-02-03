@@ -1,5 +1,7 @@
 [tool.pylint."MESSAGES CONTROL"]
 disable = """
+    unsubscriptable-object,
+    missing-class-docstring,
     too-many-ancestors,
     too-many-arguments,
     broad-except,
