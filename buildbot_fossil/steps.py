@@ -5,7 +5,7 @@ from typing import Optional
 
 from buildbot import config
 from buildbot.interfaces import WorkerSetupError
-from buildbot.process import buildstep
+from buildbot.process import remotecommand
 from buildbot.process.results import SUCCESS
 from buildbot.steps.source.base import Source
 from twisted.internet import defer
@@ -284,7 +284,7 @@ class Fossil(Source):
             if arg not in kwargs:
                 kwargs[arg] = getattr(self, arg)
 
-        cmd = buildstep.RemoteShellCommand(workdir, command, **kwargs)
+        cmd = remotecommand.RemoteShellCommand(workdir, command, **kwargs)
         cmd.useLog(self.stdio_log, False)
         yield self.runCommand(cmd)
         return cmd
