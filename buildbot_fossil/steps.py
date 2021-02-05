@@ -128,7 +128,7 @@ class Fossil(Source):
 
         match = re.match(r"This is fossil version (\d+)\.(\d+)", cmd.stdout)
         if not match:
-            raise WorkerSetupError("Unrecognized fossil version")
+            raise WorkerSetupError("unrecognized fossil version")
         # Use the same encoding as Fossil's own RELEASE_VERSION_NUMBER.
         self.fossil_version = int(match[1]) * 10000 + int(match[2]) * 100
 
@@ -208,6 +208,7 @@ class Fossil(Source):
 
         if method == "copy":
             yield self.runRmdir(self.workdir)
+            # TODO: The open --workdir option was added in Fossil-2.12.
             cmd = yield self.fossil(
                 "open", self.repopath, "--workdir", self.workdir, "--empty", workdir="."
             )

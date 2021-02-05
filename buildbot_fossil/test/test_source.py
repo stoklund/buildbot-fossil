@@ -1,6 +1,7 @@
 """Unit tests for the Fossil source step."""
 
-from buildbot.process.results import SUCCESS
+from buildbot.interfaces import WorkerSetupError
+from buildbot.process.results import EXCEPTION, FAILURE, SUCCESS
 from buildbot.test.fake.remotecommand import ExpectShell
 from buildbot.test.util import config, sourcesteps
 from buildbot.test.util.logging import LoggingMixin
@@ -45,6 +46,33 @@ class TestFossil(
 
     def tearDown(self):
         return self.tearDownSourceStep()
+
+    @defer.inlineCallbacks
+    def test_fossil_not_installed(self):
+        """Test the case where the fossil executable is not in PATH on the worker."""
+        self.setupStep(self.stepClass(REPOURL))
+        self.expectCommands(
+            ExpectShell(workdir=".", command=["fossil", "version", "-verbose"])
+            + FAILURE
+        )
+        self.expectException(WorkerSetupError)
+        self.expectOutcome(result=EXCEPTION)
+        yield self.runStep()
+        self.assertLogged("WorkerSetupError: fossil is not installed on worker")
+
+    @defer.inlineCallbacks
+    def test_fossil_is_a_teapot(self):
+        """Test the case where the fossil executable has lost its mind."""
+        self.setupStep(self.stepClass(REPOURL))
+        self.expectCommands(
+            ExpectShell(workdir=".", command=["fossil", "version", "-verbose"])
+            + ExpectShell.log("stdio", stdout="I am a teapot!")
+            + 0
+        )
+        self.expectException(WorkerSetupError)
+        self.expectOutcome(result=EXCEPTION)
+        yield self.runStep()
+        self.assertLogged("WorkerSetupError: unrecognized fossil version")
 
     @defer.inlineCallbacks
     def test_mode_incremental(self):
