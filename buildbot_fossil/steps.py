@@ -8,10 +8,12 @@ from buildbot.interfaces import WorkerSetupError
 from buildbot.process import remotecommand
 from buildbot.process.results import SUCCESS
 from buildbot.steps.source.base import Source
+from buildbot.util.logger import Logger
 from twisted.internet import defer
 
 
 class Fossil(Source):
+    log = Logger()
     name = "fossil"
 
     possible_methods = ("fresh", "copy", "clobber")
@@ -32,8 +34,6 @@ class Fossil(Source):
             URL of the upstream Fossil repository. This can be any URL supported by
             :command:`fossil clone`.
 
-        Keyword Arguments
-        -----------------
         mode
             One of "full" or "incremental". In the default "incremental" mode, build files
             are left in place in the `workdir`, and only :command:`fossil revert` is used to
@@ -70,11 +70,17 @@ class Fossil(Source):
         # Defined in run_vc():
         self.stdio_log = None
         self.repopath = None
+        # Defined in check_fossil_version():
+        self.fossil_version = None
+        self.fossil_json = None
 
     @defer.inlineCallbacks
     def run_vc(self, branch, revision, patch):
         """Main entry point for source steps"""
         self.stdio_log = yield self.addLogForRemoteCommands("stdio")
+        res = yield self.check_fossil_version()
+        if res != SUCCESS:
+            return res
 
         # Store the repo file as `build.fossil` next to the `build/` workdir.
         self.repopath = self.workdir.rstrip(r"\/") + ".fossil"
@@ -109,6 +115,33 @@ class Fossil(Source):
         """
         text = fmt.format(*args, **kwargs)
         return self.stdio_log.addHeader("\n=== " + text + " ===\n")
+
+    @defer.inlineCallbacks
+    def check_fossil_version(self):
+        """Check that the worker has a fossil executable and get its version."""
+        yield self.msg("checking fossil version")
+        cmd = yield self.fossil("version", "-verbose", workdir=".", collectStdout=True)
+        if cmd.didFail():
+            raise WorkerSetupError("fossil is not installed on worker")
+        if cmd.results() != SUCCESS:
+            return cmd.results()
+
+        match = re.match(r"This is fossil version (\d+)\.(\d+)", cmd.stdout)
+        if not match:
+            raise WorkerSetupError("Unrecognized fossil version")
+        # Use the same encoding as Fossil's own RELEASE_VERSION_NUMBER.
+        self.fossil_version = int(match[1]) * 10000 + int(match[2]) * 100
+
+        match = re.search(r"^JSON \(API (\d+)\)$", cmd.stdout, re.MULTILINE)
+        self.fossil_json = int(match[1]) if match else 0
+
+        self.log.info(
+            "worker {name} has Fossil/{version}, JSON/{json}",
+            name=self.worker.workername,
+            version=self.fossil_version,
+            json=self.fossil_json,
+        )
+        return SUCCESS
 
     @defer.inlineCallbacks
     def incremental_clean(self):
@@ -152,8 +185,6 @@ class Fossil(Source):
         if method == "clobber":
             yield self.runRmFile(self.repopath, abandonOnFailure=False)
             cmd = yield self.fossil("clone", self.repourl, self.repopath, workdir=".")
-            if cmd.didFail():
-                yield self.check_fossil()
             if cmd.results() != SUCCESS:
                 return cmd.results()
             # After cloning, proceed as 'copy'
@@ -195,10 +226,6 @@ class Fossil(Source):
         cmd = yield self.fossil(
             "remote", "-R", self.repopath, workdir=".", collectStdout=True
         )
-
-        # Do we even have a working fossil executable?
-        if cmd.didFail():
-            yield self.check_fossil()
 
         if cmd.results() != SUCCESS:
             yield self.msg(
@@ -256,14 +283,6 @@ class Fossil(Source):
             self.updateSourceProperty("got_tags", match[1].split(", "))
 
         return SUCCESS
-
-    @defer.inlineCallbacks
-    def check_fossil(self):
-        """Check that the worker has a fossil executable"""
-        yield self.msg("checking fossil executable")
-        cmd = yield self.fossil("version", "-v")
-        if cmd.didFail():
-            raise WorkerSetupError("fossil is not installed on worker")
 
     @defer.inlineCallbacks
     def fossil(self, *args, **kwargs):
