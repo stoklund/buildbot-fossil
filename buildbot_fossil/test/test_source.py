@@ -82,11 +82,12 @@ class TestFossil(
             ExpectShell(workdir=".", command=["fossil", "version", "-verbose"])
             + ExpectShell.log("stdio", stdout=FOSSIL_215)
             + 0,
-            ExpectShell(workdir=".", command=["fossil", "remote", "-R", "wkdir.fossil"])
-            + ExpectShell.log("stdio", stdout=REPOURL)
+            ExpectShell(
+                workdir=".", command=["fossil", "pull", REPOURL, "-R", "wkdir.fossil"]
+            )
             + 0,
             ExpectShell(workdir="wkdir", command=["fossil", "revert"]) + 0,
-            ExpectShell(workdir="wkdir", command=["fossil", "update", "tip"]) + 0,
+            ExpectShell(workdir="wkdir", command=["fossil", "checkout", "tip"]) + 0,
             ExpectShell(workdir="wkdir", command=["fossil", "status", "--differ"]) + 0,
         )
         self.expectOutcome(result=SUCCESS)

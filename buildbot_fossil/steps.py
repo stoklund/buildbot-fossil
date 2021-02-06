@@ -5,8 +5,8 @@ from typing import Optional
 
 from buildbot import config
 from buildbot.interfaces import WorkerSetupError
-from buildbot.process import remotecommand
-from buildbot.process.results import SUCCESS
+from buildbot.process import buildstep, remotecommand
+from buildbot.process.results import CANCELLED, FAILURE, SUCCESS
 from buildbot.steps.source.base import Source
 from buildbot.util.logger import Logger
 from twisted.internet import defer
@@ -23,7 +23,7 @@ class Fossil(Source):
         repourl: str = None,
         mode: str = "incremental",
         method: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """
         Check out a revision from the Fossil SCM.
@@ -95,7 +95,7 @@ class Fossil(Source):
         if res != SUCCESS:
             return res
 
-        res = yield self.fossil_update(branch, revision)
+        res = yield self.fossil_checkout(branch, revision)
         if res != SUCCESS:
             return res
 
@@ -157,33 +157,37 @@ class Fossil(Source):
         The revert ensures that any changed to versioned files are reverted,
         but any extra files in the workdir are preserved.
         """
-        repo_ok = yield self._check_repo()
-        if not repo_ok:
-            res = yield self.full_clean("clobber", repo_ok)
+        repo_status = yield self.update_repo()
+        if repo_status != SUCCESS:
+            yield self.msg("no repo found, cloning")
+            res = yield self.full_clean("copy", repo_status)
             return res
 
         cmd = yield self.fossil("revert")
         if not cmd.didFail():
-            return cmd.results()  # success or cancelled
+            return cmd.results()
 
         yield self.msg("failed to revert, using full/copy checkout")
-        res = yield self.full_clean("copy", repo_ok)
+        res = yield self.full_clean("copy", repo_status)
         return res
 
     @defer.inlineCallbacks
-    def full_clean(self, method, repo_ok=None):
+    def full_clean(self, method, repo_status=None):
         """
         Perform a full mode checkout according to `method`.
+
+        If the repository has already been updated, pass the status in `repo_status`.
         """
         # Fall back to clobber unless we have a good repo clone.
-        if method != "clobber":
-            if repo_ok is None:
-                repo_ok = yield self._check_repo()
-            if not repo_ok:
+        if method == "clobber":
+            yield self.runRmFile(self.repopath, abandonOnFailure=False)
+        else:
+            if repo_status is None:
+                repo_status = yield self.update_repo()
+            if repo_status != SUCCESS:
                 method = "clobber"
 
         if method == "clobber":
-            yield self.runRmFile(self.repopath, abandonOnFailure=False)
             cmd = yield self.fossil("clone", self.repourl, self.repopath, workdir=".")
             if cmd.results() != SUCCESS:
                 return cmd.results()
@@ -218,37 +222,33 @@ class Fossil(Source):
         return SUCCESS
 
     @defer.inlineCallbacks
-    def _check_repo(self):
+    def update_repo(self):
         """
-        Check that the repo file exists and refers to the right remote URL.
+        Check that the repo file exists and pull in changes from the remote.
 
-        Returns `True` for a good repo.
+        Returns `SUCCESS` for a good repo, `FAILURE` if the repo is missing or broken.
         """
-        cmd = yield self.fossil(
-            "remote", "-R", self.repopath, workdir=".", collectStdout=True
-        )
+        # Some that `pull` doesn't return an error code on network problems.
+        cmd = yield self.fossil("pull", self.repourl, "-R", self.repopath, workdir=".")
+        if cmd.results() != FAILURE:
+            return cmd.results()
 
-        if cmd.results() != SUCCESS:
-            yield self.msg(
-                "couldn't read {}, falling back to full/clobber", self.repopath
+        # The pull failed. If this is because the repo file is missing, we want to try a
+        # clone. Otherwise, fail the whole buildstep. Don't attempt to repair a repo
+        # when we don't understand the problem.
+        repo_exists = yield self.pathExists(self.repopath)
+        if repo_exists:
+            self.log.error(
+                "Problem with existing Fossil repo {repo}", repo=self.repopath
             )
-            return False
+            raise buildstep.BuildStepFailed()
 
-        remote = cmd.stdout.strip()
-        if remote != self.repourl:
-            yield self.msg(
-                "expected remote URL {} in {}, using full/clobber",
-                self.repourl,
-                self.repopath,
-            )
-            return False
-
-        return True
+        return FAILURE
 
     @defer.inlineCallbacks
-    def fossil_update(self, branch, revision):
+    def fossil_checkout(self, branch, revision):
         """
-        Update workdir to the right revision
+        Update workdir to the right revision.
 
         The `steps.Source` parent handles the `alwaysUseLatest` and `branch`
         configuration options and translate them to the `revision` and `branch`
@@ -264,7 +264,7 @@ class Fossil(Source):
         else:
             version = "tip"
 
-        cmd = yield self.fossil("update", version)
+        cmd = yield self.fossil("checkout", version)
         return cmd.results()
 
     @defer.inlineCallbacks
@@ -307,4 +307,6 @@ class Fossil(Source):
         cmd = remotecommand.RemoteShellCommand(workdir, command, **kwargs)
         cmd.useLog(self.stdio_log, False)
         yield self.runCommand(cmd)
+        if cmd.results() == CANCELLED:
+            raise buildstep.BuildstepCancelled()
         return cmd
