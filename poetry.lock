@@ -36,7 +36,7 @@ tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>
 
 [[package]]
 name = "autobahn"
-version = "20.12.3"
+version = "21.1.1"
 description = "WebSocket client & server library, WAMP real-time framework"
 category = "main"
 optional = false
@@ -49,7 +49,7 @@ txaio = ">=20.4.1"
 
 [package.extras]
 accelerate = ["wsaccel (>=0.6.2)"]
-all = ["zope.interface (>=3.6.0)", "twisted (>=20.3.0)", "attrs (>=19.2.0)", "wsaccel (>=0.6.2)", "python-snappy (>=0.5)", "msgpack (>=0.6.1)", "ujson (>=1.35)", "cbor2 (>=5.0.1)", "cbor (>=1.0.0)", "py-ubjson (>=0.8.4)", "flatbuffers (>=1.10)", "pyopenssl (>=16.2.0)", "service-identity (>=18.1.0)", "pynacl (>=1.0.1)", "pytrie (>=0.2)", "pyqrcode (>=1.1)", "cffi (>=1.11.5)", "argon2-cffi (>=18.1.0)", "passlib (>=1.7.1)", "cbor2 (>=5.1.0)", "zlmdb (>=20.4.1)", "autobahn (>=18.11.2)", "web3 (>=4.8.1)", "rlp (>=2.0.1)", "py-eth-sig-utils (>=0.4.0)", "py-ecc (>=1.7.1)", "eth-abi (>=1.3.0)", "mnemonic (>=0.13)", "base58 (>=1.0.2,<2.0)", "ecdsa (>=0.13)", "py-multihash (>=0.2.3)"]
+all = ["zope.interface (>=3.6.0)", "twisted (>=20.3.0)", "attrs (>=19.2.0)", "wsaccel (>=0.6.2)", "python-snappy (>=0.5)", "msgpack (>=0.6.1)", "ujson (>=1.35)", "cbor2 (>=5.0.1)", "cbor (>=1.0.0)", "py-ubjson (>=0.8.4)", "flatbuffers (>=1.10)", "pyopenssl (>=16.2.0)", "service-identity (>=18.1.0)", "pynacl (>=1.0.1)", "pytrie (>=0.2)", "pyqrcode (>=1.1)", "cffi (>=1.11.5)", "argon2-cffi (>=18.1.0)", "passlib (>=1.7.1)", "cbor2 (>=5.1.0)", "zlmdb (>=20.4.1)", "autobahn (>=18.11.2)", "web3 (>=4.8.1)", "jinja2 (>=2.11.2)", "rlp (>=2.0.1)", "py-eth-sig-utils (>=0.4.0)", "py-ecc (>=1.7.1)", "eth-abi (>=1.3.0)", "mnemonic (>=0.13)", "base58 (>=1.0.2,<2.0)", "ecdsa (>=0.13)", "py-multihash (>=0.2.3)"]
 compress = ["python-snappy (>=0.5)"]
 dev = ["pep8-naming (>=0.3.3)", "flake8 (>=2.5.1)", "pyflakes (>=1.0.0)", "pytest (>=2.8.6,<3.3.0)", "twine (>=1.6.5)", "sphinx (>=1.2.3)", "sphinxcontrib-images (>=0.9.2)", "pyenchant (>=1.6.6)", "sphinxcontrib-spelling (>=2.1.2)", "sphinx-rtd-theme (>=0.1.9)", "awscli", "qualname", "passlib", "wheel", "pytest-asyncio (<0.6)", "pytest-aiohttp"]
 encryption = ["pyopenssl (>=16.2.0)", "service-identity (>=18.1.0)", "pynacl (>=1.0.1)", "pytrie (>=0.2)", "pyqrcode (>=1.1)"]
@@ -57,7 +57,7 @@ nvx = ["cffi (>=1.11.5)"]
 scram = ["cffi (>=1.11.5)", "argon2-cffi (>=18.1.0)", "passlib (>=1.7.1)"]
 serialization = ["msgpack (>=0.6.1)", "ujson (>=1.35)", "cbor2 (>=5.0.1)", "cbor (>=1.0.0)", "py-ubjson (>=0.8.4)", "flatbuffers (>=1.10)"]
 twisted = ["zope.interface (>=3.6.0)", "twisted (>=20.3.0)", "attrs (>=19.2.0)"]
-xbr = ["cbor2 (>=5.1.0)", "zlmdb (>=20.4.1)", "twisted (>=20.3.0)", "autobahn (>=18.11.2)", "web3 (>=4.8.1)", "rlp (>=2.0.1)", "py-eth-sig-utils (>=0.4.0)", "py-ecc (>=1.7.1)", "eth-abi (>=1.3.0)", "mnemonic (>=0.13)", "base58 (>=1.0.2,<2.0)", "ecdsa (>=0.13)", "py-multihash (>=0.2.3)"]
+xbr = ["cbor2 (>=5.1.0)", "zlmdb (>=20.4.1)", "twisted (>=20.3.0)", "autobahn (>=18.11.2)", "web3 (>=4.8.1)", "jinja2 (>=2.11.2)", "rlp (>=2.0.1)", "py-eth-sig-utils (>=0.4.0)", "py-ecc (>=1.7.1)", "eth-abi (>=1.3.0)", "mnemonic (>=0.13)", "base58 (>=1.0.2,<2.0)", "ecdsa (>=0.13)", "py-multihash (>=0.2.3)"]
 
 [[package]]
 name = "automat"
@@ -87,7 +87,7 @@ pytz = ">=2015.7"
 
 [[package]]
 name = "buildbot"
-version = "2.10.1.dev84"
+version = "2.10.1.dev87"
 description = "The Continuous Integration Framework"
 category = "main"
 optional = false
@@ -705,7 +705,7 @@ python-versions = ">= 3.5"
 
 [[package]]
 name = "treq"
-version = "20.9.0"
+version = "21.1.0"
 description = "High-level Twisted HTTP Client API"
 category = "main"
 optional = false
@@ -713,14 +713,11 @@ python-versions = ">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*"
 
 [package.dependencies]
 attrs = "*"
-hyperlink = ">=19.0.0"
+hyperlink = ">=21.0.0"
 incremental = "*"
 requests = ">=2.1.0"
-six = "*"
-Twisted = [
-    {version = ">=16.4.0", extras = ["tls"], markers = "python_version < \"3.7\""},
-    {version = ">=18.7.0", extras = ["tls"], markers = "python_version >= \"3.7\""},
-]
+six = ">=1.13.0"
+Twisted = {version = ">=18.7.0", extras = ["tls"]}
 
 [package.extras]
 dev = ["mock", "pep8", "pyflakes", "sphinx", "httpbin (==0.5.0)"]
@@ -815,7 +812,7 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6"
-content-hash = "11e7d00f873b4fabd46a7e8ece4d107f3dec87809205a020761705fd15e8976d"
+content-hash = "69a42c324dfb577b26f49cd3c9333eb5c2a608c11346ea49bc08d91e8ee6a126"
 
 [metadata.files]
 alabaster = [
@@ -831,8 +828,8 @@ attrs = [
     {file = "attrs-20.3.0.tar.gz", hash = "sha256:832aa3cde19744e49938b91fea06d69ecb9e649c93ba974535d08ad92164f700"},
 ]
 autobahn = [
-    {file = "autobahn-20.12.3-py2.py3-none-any.whl", hash = "sha256:52ee4236ff9a1fcbbd9500439dcf3284284b37f8a6b31ecc8a36e00cf9f95049"},
-    {file = "autobahn-20.12.3.tar.gz", hash = "sha256:410a93e0e29882c8b5d5ab05d220b07609b886ef5f23c0b8d39153254ffd6895"},
+    {file = "autobahn-21.1.1-py2.py3-none-any.whl", hash = "sha256:cceed2121b7a93024daa93c91fae33007f8346f0e522796421f36a6183abea99"},
+    {file = "autobahn-21.1.1.tar.gz", hash = "sha256:93df8fc9d1821c9dabff9fed52181a9ad6eea5e9989d53102c391607d7c1666e"},
 ]
 automat = [
     {file = "Automat-20.2.0-py2.py3-none-any.whl", hash = "sha256:b6feb6455337df834f6c9962d6ccf771515b7d939bca142b29c20c2376bc6111"},
@@ -1262,8 +1259,8 @@ tornado = [
     {file = "tornado-6.1.tar.gz", hash = "sha256:33c6e81d7bd55b468d2e793517c909b139960b6c790a60b7991b9b6b76fb9791"},
 ]
 treq = [
-    {file = "treq-20.9.0-py2.py3-none-any.whl", hash = "sha256:cff0ebf3476e2eb8599cacf8cbac4288a7c2f8a82fed5ea1708d600a2a6074a4"},
-    {file = "treq-20.9.0.tar.gz", hash = "sha256:83cd2ca75aef4f1fbdbe144c186426d930c3e8b20385df8cec9e12d442986da2"},
+    {file = "treq-21.1.0-py2.py3-none-any.whl", hash = "sha256:dc3aa1c9355a7693cc2483a797369d0db8a2c1ef857e4a6684d302b4d380ddfa"},
+    {file = "treq-21.1.0.tar.gz", hash = "sha256:fdae0c872c444ed96c3cb11be8445d22e4afb731e87fdddae3b00c609e77199f"},
 ]
 twisted = [
     {file = "Twisted-20.3.0-cp27-cp27m-macosx_10_6_intel.whl", hash = "sha256:cdbc4c7f0cd7a2218b575844e970f05a1be1861c607b0e048c9bceca0c4d42f7"},
