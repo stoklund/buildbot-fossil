@@ -1,5 +1,6 @@
 """Fossil source build step"""
 
+import json
 import re
 from typing import Optional
 
@@ -271,19 +272,31 @@ class Fossil(Source):
 
     @defer.inlineCallbacks
     def fossil_status(self):
-        """Check the status of the checkout, set build properties"""
-        cmd = yield self.fossil("status", "--differ", collectStdout=True)
-        if cmd.results() != SUCCESS:
-            return cmd.results()
+        """Check the status of the checkout, set build properties."""
+        # Prefer the json status command if it is available. It gives us all the digits
+        # of SHA-256 hashes, and it is likely more stable.
+        if self.fossil_json > 0:
+            cmd = yield self.fossil("json", "status", collectStdout=True)
+            if cmd.results() != SUCCESS:
+                return cmd.results()
 
-        # Extract got_revision from the status output.
-        match = re.search(r"^checkout:\s+([0-9a-f]+)", cmd.stdout, re.MULTILINE)
-        if match:
-            self.updateSourceProperty("got_revision", match[1])
+            checkout = json.loads(cmd.stdout)["payload"]["checkout"]
+            self.updateSourceProperty("got_revision", checkout["uuid"])
+            self.updateSourceProperty("got_tags", checkout["tags"])
+        else:
+            # No JSON API available
+            cmd = yield self.fossil("status", "--differ", collectStdout=True)
+            if cmd.results() != SUCCESS:
+                return cmd.results()
 
-        match = re.search(r"^tags:\s+(.+)$", cmd.stdout, re.MULTILINE)
-        if match:
-            self.updateSourceProperty("got_tags", match[1].split(", "))
+            # Extract got_revision from the status output.
+            match = re.search(r"^checkout:\s+([0-9a-f]+)", cmd.stdout, re.MULTILINE)
+            if match:
+                self.updateSourceProperty("got_revision", match[1])
+
+            match = re.search(r"^tags:\s+(.+)$", cmd.stdout, re.MULTILINE)
+            if match:
+                self.updateSourceProperty("got_tags", match[1].split(", "))
 
         return SUCCESS
 

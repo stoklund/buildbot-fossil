@@ -27,6 +27,29 @@ FOSSIL_DYNAMIC_BUILD
 SQLite 3.35.0 2021-01-27 19:15:06 9dc7fc9f04
 """
 FOSSIL_212_1 = """This is fossil version 2.12.1 [d4041437b6] 2021-01-28 20:42:53 UTC"""
+JSON_STATUS = """{
+	"fossil":"d4041437b6f40d0cc62f22d2973498d596af325b1d18fed2dd7584aef733df7a",
+	"timestamp":1612721685,
+	"command":"status",
+	"procTimeUs":2678,
+	"procTimeMs":2,
+	"payload":{
+		"repository":"/Users/jolesen/Fossils/buildbot-fossil.fossil",
+		"localRoot":"/Users/jolesen/devel/buildbot-fossil/",
+		"checkout":{
+			"uuid":"9be9ceea32360ecb0fe0051681f8258e84665fd728c2ed69726550206619d2a7",
+			"tags":["trunk", "release"],
+			"datetime":"2021-02-07 17:46:17 UTC",
+			"timestamp":1612719977
+		},
+		"files":[{
+				"name":"buildbot_fossil/steps.py",
+				"status":"edited"
+			}],
+		"errorCount":0
+	}
+}
+"""
 
 
 def expect_v215():
@@ -51,6 +74,13 @@ def expect_fossil(*args):
 def expect_open():
     """Expect a fossil open command"""
     return expect_fossil_dot("open", "wkdir.fossil", "--workdir", "wkdir", "--empty")
+
+
+def expect_json_status():
+    """Expect a json status command, return JSON example."""
+    return expect_fossil("json", "status") + ExpectShell.log(
+        "stdio", stdout=JSON_STATUS
+    )
 
 
 def interrupt_cmd(cmd):
@@ -113,9 +143,11 @@ class TestFossil(
             + ExpectShell.log("stdio", stdout=FOSSIL_212_1)
             + 0,
             expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") + 0,
-            expect_fossil("revert") + Expect.behavior(interrupt_cmd),
+            expect_fossil("revert") + 0,
+            expect_fossil("checkout", "tip") + 0,
+            expect_fossil("status", "--differ") + 0,
         )
-        self.expectOutcome(result=CANCELLED)
+        self.expectOutcome(result=SUCCESS)
         yield self.runStep()
         self.assertLogged("worker test has Fossil/21201, JSON/0")
 
@@ -128,9 +160,15 @@ class TestFossil(
             expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") + 0,
             expect_fossil("revert") + 0,
             expect_fossil("checkout", "tip") + 0,
-            expect_fossil("status", "--differ") + 0,
+            expect_json_status() + 0,
         )
         self.expectOutcome(result=SUCCESS)
+        self.expectProperty(
+            "got_revision",
+            "9be9ceea32360ecb0fe0051681f8258e84665fd728c2ed69726550206619d2a7",
+            "Fossil",
+        )
+        self.expectProperty("got_tags", ["trunk", "release"], "Fossil")
         yield self.runStep()
         self.assertLogged("worker test has Fossil/21500, JSON/20120713")
 
@@ -148,7 +186,7 @@ class TestFossil(
             Expect("rmdir", {"dir": "wkdir", "logEnviron": False}) + SUCCESS,
             expect_open() + 0,
             expect_fossil("checkout", "tip") + 0,
-            expect_fossil("status", "--differ") + 0,
+            expect_json_status() + 0,
         )
         self.expectOutcome(result=SUCCESS)
         yield self.runStep()
@@ -189,7 +227,7 @@ class TestFossil(
             Expect("rmdir", {"dir": "wkdir", "logEnviron": False}) + SUCCESS,
             expect_open() + 0,
             expect_fossil("checkout", "tip") + 0,
-            expect_fossil("status", "--differ") + 0,
+            expect_json_status() + 0,
         )
         self.expectOutcome(result=SUCCESS)
         yield self.runStep()
