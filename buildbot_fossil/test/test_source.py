@@ -28,6 +28,14 @@ SQLite 3.35.0 2021-01-27 19:15:06 9dc7fc9f04
 """
 
 
+def expect_v215():
+    return (
+        ExpectShell(".", ["fossil", "version", "-verbose"])
+        + ExpectShell.log("stdio", stdout=FOSSIL_215)
+        + 0
+    )
+
+
 class TestFossil(
     sourcesteps.SourceStepMixin,
     config.ConfigErrorsMixin,
@@ -78,9 +86,7 @@ class TestFossil(
         """Test the incremental mode, assuming clone and workdir already exist."""
         self.setupStep(self.stepClass(REPOURL, mode="incremental"))
         self.expectCommands(
-            ExpectShell(".", ["fossil", "version", "-verbose"])
-            + ExpectShell.log("stdio", stdout=FOSSIL_215)
-            + 0,
+            expect_v215(),
             ExpectShell(".", ["fossil", "pull", REPOURL, "-R", "wkdir.fossil"]) + 0,
             ExpectShell("wkdir", ["fossil", "revert"]) + 0,
             ExpectShell("wkdir", ["fossil", "checkout", "tip"]) + 0,
@@ -95,9 +101,7 @@ class TestFossil(
         """Test the incremental mode, assuming no repo exists."""
         self.setupStep(self.stepClass(REPOURL, mode="incremental"))
         self.expectCommands(
-            ExpectShell(".", ["fossil", "version", "-verbose"])
-            + ExpectShell.log("stdio", stdout=FOSSIL_215)
-            + 0,
+            expect_v215(),
             ExpectShell(".", ["fossil", "pull", REPOURL, "-R", "wkdir.fossil"]) + 1,
             # After pull fails, stat the repo clone to see if it exists.
             Expect("stat", {"file": "wkdir.fossil", "logEnviron": True}) + FAILURE,
@@ -127,12 +131,26 @@ class TestFossil(
         """Pull fails, but there is a repo file. Don't try to fix it, fail instead."""
         self.setupStep(self.stepClass(REPOURL, mode="incremental"))
         self.expectCommands(
-            ExpectShell(".", ["fossil", "version", "-verbose"])
-            + ExpectShell.log("stdio", stdout=FOSSIL_215)
-            + 0,
+            expect_v215(),
             ExpectShell(".", ["fossil", "pull", REPOURL, "-R", "wkdir.fossil"]) + 1,
             # After pull fails, stat the repo clone to see if it exists.
             Expect("stat", {"file": "wkdir.fossil", "logEnviron": True}) + SUCCESS,
         )
         self.expectOutcome(result=FAILURE)
+        yield self.runStep()
+
+    @defer.inlineCallbacks
+    def test_mode_incremental_cancelled_pull(self):
+        """Cancelled during pull."""
+        self.setupStep(self.stepClass(REPOURL, mode="incremental"))
+        def interrupt_cmd(cmd):
+            cmd.set_run_interrupt()
+            cmd.interrupt("test")
+
+        self.expectCommands(
+            expect_v215(),
+            ExpectShell(".", ["fossil", "pull", REPOURL, "-R", "wkdir.fossil"])
+            + Expect.behavior(interrupt_cmd),
+        )
+        self.expectOutcome(result=CANCELLED)
         yield self.runStep()

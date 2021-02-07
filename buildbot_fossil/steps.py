@@ -308,5 +308,5 @@ class Fossil(Source):
         cmd.useLog(self.stdio_log, False)
         yield self.runCommand(cmd)
         if cmd.results() == CANCELLED:
-            raise buildstep.BuildstepCancelled()
+            raise buildstep.BuildStepCancelled()
         return cmd
