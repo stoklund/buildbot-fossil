@@ -36,6 +36,20 @@ def expect_v215():
     )
 
 
+def expect_open():
+    return ExpectShell(
+        ".",
+        [
+            "fossil",
+            "open",
+            "wkdir.fossil",
+            "--workdir",
+            "wkdir",
+            "--empty",
+        ],
+    )
+
+
 class TestFossil(
     sourcesteps.SourceStepMixin,
     config.ConfigErrorsMixin,
@@ -108,18 +122,7 @@ class TestFossil(
             ExpectShell(".", ["fossil", "clone", REPOURL, "wkdir.fossil"]) + 0,
             # Then proceed as clobber/copy.
             Expect("rmdir", {"dir": "wkdir", "logEnviron": True}) + SUCCESS,
-            ExpectShell(
-                ".",
-                [
-                    "fossil",
-                    "open",
-                    "wkdir.fossil",
-                    "--workdir",
-                    "wkdir",
-                    "--empty",
-                ],
-            )
-            + 0,
+            expect_open() + 0,
             ExpectShell("wkdir", ["fossil", "checkout", "tip"]) + 0,
             ExpectShell("wkdir", ["fossil", "status", "--differ"]) + 0,
         )
@@ -143,6 +146,7 @@ class TestFossil(
     def test_mode_incremental_cancelled_pull(self):
         """Cancelled during pull."""
         self.setupStep(self.stepClass(REPOURL, mode="incremental"))
+
         def interrupt_cmd(cmd):
             cmd.set_run_interrupt()
             cmd.interrupt("test")
@@ -153,4 +157,33 @@ class TestFossil(
             + Expect.behavior(interrupt_cmd),
         )
         self.expectOutcome(result=CANCELLED)
+        yield self.runStep()
+
+    @defer.inlineCallbacks
+    def test_mode_incremental_revert_failed(self):
+        """Revert fails, fall back to full/copy."""
+        self.setupStep(self.stepClass(REPOURL, mode="incremental"))
+        self.expectCommands(
+            expect_v215(),
+            ExpectShell(".", ["fossil", "pull", REPOURL, "-R", "wkdir.fossil"]) + 0,
+            ExpectShell("wkdir", ["fossil", "revert"]) + 1,
+            Expect("rmdir", {"dir": "wkdir", "logEnviron": True}) + SUCCESS,
+            expect_open() + 0,
+            ExpectShell("wkdir", ["fossil", "checkout", "tip"]) + 0,
+            ExpectShell("wkdir", ["fossil", "status", "--differ"]) + 0,
+        )
+        self.expectOutcome(result=SUCCESS)
+        yield self.runStep()
+
+    @defer.inlineCallbacks
+    def test_mode_incremental_checkout_failed(self):
+        """Test the incremental mode, assuming clone and workdir already exist."""
+        self.setupStep(self.stepClass(REPOURL, mode="incremental"))
+        self.expectCommands(
+            expect_v215(),
+            ExpectShell(".", ["fossil", "pull", REPOURL, "-R", "wkdir.fossil"]) + 0,
+            ExpectShell("wkdir", ["fossil", "revert"]) + 0,
+            ExpectShell("wkdir", ["fossil", "checkout", "tip"]) + 1,
+        )
+        self.expectOutcome(result=FAILURE)
         yield self.runStep()
