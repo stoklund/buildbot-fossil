@@ -12,6 +12,9 @@ from buildbot.steps.source.base import Source
 from buildbot.util.logger import Logger
 from twisted.internet import defer
 
+# First Fossil version that supports `open --workdir`
+HAS_OPEN_WORKDIR = 21200
+
 
 class Fossil(Source):
     log = Logger()
@@ -215,12 +218,9 @@ class Fossil(Source):
 
         if method == "copy":
             yield self.runRmdir(self.workdir)
-            # TODO: The open --workdir option was added in Fossil-2.12.
-            cmd = yield self.fossil(
-                "open", self.repopath, "--workdir", self.workdir, "--empty", workdir="."
-            )
-            if cmd.results() != SUCCESS:
-                return cmd.results()
+            res = yield self.fossil_open()
+            if res != SUCCESS:
+                return res
 
         return SUCCESS
 
@@ -247,6 +247,28 @@ class Fossil(Source):
             raise buildstep.BuildStepFailed()
 
         return FAILURE
+
+    @defer.inlineCallbacks
+    def fossil_open(self):
+        """
+        Open the `self.repopath` repo in `self.workdir`.
+
+        Assume that the workdir does not exist.
+        """
+        if self.fossil_version >= HAS_OPEN_WORKDIR:
+            cmd = yield self.fossil(
+                "open", self.repopath, "--workdir", self.workdir, "--empty", workdir="."
+            )
+            return cmd.results()
+
+        # We have an older fossil which doesn't support the --workdir option.
+        yield self.runMkdir(self.workdir)
+
+        # We need to refer to the repo file using the worker's path syntax.
+        pm = self.build.path_module
+        repo = pm.join("..", pm.split(self.repopath)[1])
+        cmd = yield self.fossil("open", repo, "--empty")
+        return cmd.results()
 
     @defer.inlineCallbacks
     def fossil_checkout(self, branch, revision):

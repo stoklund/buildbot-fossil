@@ -27,6 +27,9 @@ FOSSIL_DYNAMIC_BUILD
 SQLite 3.35.0 2021-01-27 19:15:06 9dc7fc9f04
 """
 FOSSIL_212_1 = """This is fossil version 2.12.1 [d4041437b6] 2021-01-28 20:42:53 UTC"""
+FOSSIL_208 = """This is fossil version 2.8
+JSON (API 20120713)
+"""
 JSON_STATUS = """{
 	"fossil":"d4041437b6f40d0cc62f22d2973498d596af325b1d18fed2dd7584aef733df7a",
 	"timestamp":1612721685,
@@ -244,3 +247,29 @@ class TestFossil(
         )
         self.expectOutcome(result=FAILURE)
         yield self.runStep()
+
+    @defer.inlineCallbacks
+    def test_mode_full_copy(self):
+        """Test the full/copy mode, assuming clone already exists."""
+        self.setupStep(self.stepClass(REPOURL, mode="full", method="copy"))
+        self.changeWorkerSystem('win32')
+        self.expectCommands(
+            ExpectShell(".", ["fossil", "version", "-verbose"], logEnviron=True)
+            + ExpectShell.log("stdio", stdout=FOSSIL_208)
+            + 0,
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") + 0,
+            Expect("rmdir", {"dir": "wkdir", "logEnviron": False}) + SUCCESS,
+            Expect("mkdir", {"dir": "wkdir", "logEnviron": False}) + SUCCESS,
+            expect_fossil("open", r"..\wkdir.fossil", "--empty") + 0,
+            expect_fossil("checkout", "tip") + 0,
+            expect_json_status() + 0,
+        )
+        self.expectOutcome(result=SUCCESS)
+        self.expectProperty(
+            "got_revision",
+            "9be9ceea32360ecb0fe0051681f8258e84665fd728c2ed69726550206619d2a7",
+            "Fossil",
+        )
+        self.expectProperty("got_tags", ["trunk", "release"], "Fossil")
+        yield self.runStep()
+        self.assertLogged("worker test has Fossil/20800, JSON/20120713")
