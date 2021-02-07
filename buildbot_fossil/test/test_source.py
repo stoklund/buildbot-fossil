@@ -26,6 +26,7 @@ UNICODE_COMMAND_LINE
 FOSSIL_DYNAMIC_BUILD
 SQLite 3.35.0 2021-01-27 19:15:06 9dc7fc9f04
 """
+FOSSIL_212_1 = """This is fossil version 2.12.1 [d4041437b6] 2021-01-28 20:42:53 UTC"""
 
 
 def expect_v215():
@@ -50,6 +51,12 @@ def expect_fossil(*args):
 def expect_open():
     """Expect a fossil open command"""
     return expect_fossil_dot("open", "wkdir.fossil", "--workdir", "wkdir", "--empty")
+
+
+def interrupt_cmd(cmd):
+    """Behavior callback which interrupts the current command."""
+    cmd.set_run_interrupt()
+    cmd.interrupt("test")
 
 
 class TestFossil(
@@ -96,6 +103,21 @@ class TestFossil(
         self.expectOutcome(result=EXCEPTION)
         yield self.runStep()
         self.assertLogged("WorkerSetupError: unrecognized fossil version")
+
+    @defer.inlineCallbacks
+    def test_triple_version(self):
+        """Some fossil versions are a.b.c."""
+        self.setupStep(self.stepClass(REPOURL, mode="incremental"))
+        self.expectCommands(
+            ExpectShell(".", ["fossil", "version", "-verbose"])
+            + ExpectShell.log("stdio", stdout=FOSSIL_212_1)
+            + 0,
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") + 0,
+            expect_fossil("revert") + Expect.behavior(interrupt_cmd),
+        )
+        self.expectOutcome(result=CANCELLED)
+        yield self.runStep()
+        self.assertLogged("worker test has Fossil/21201, JSON/0")
 
     @defer.inlineCallbacks
     def test_mode_incremental(self):
@@ -148,11 +170,6 @@ class TestFossil(
     def test_mode_incremental_cancelled_pull(self):
         """Cancelled during pull."""
         self.setupStep(self.stepClass(REPOURL, mode="incremental"))
-
-        def interrupt_cmd(cmd):
-            cmd.set_run_interrupt()
-            cmd.interrupt("test")
-
         self.expectCommands(
             expect_v215(),
             expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil")

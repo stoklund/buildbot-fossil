@@ -126,11 +126,13 @@ class Fossil(Source):
         if cmd.results() != SUCCESS:
             return cmd.results()
 
-        match = re.match(r"This is fossil version (\d+)\.(\d+)", cmd.stdout)
+        match = re.match(r"This is fossil version (\d+(\.\d+)+)", cmd.stdout)
         if not match:
             raise WorkerSetupError("unrecognized fossil version")
         # Use the same encoding as Fossil's own RELEASE_VERSION_NUMBER.
-        self.fossil_version = int(match[1]) * 10000 + int(match[2]) * 100
+        self.fossil_version = sum(
+            int(v) * s for v, s in zip(match[1].split("."), (10000, 100, 1))
+        )
 
         match = re.search(r"^JSON \(API (\d+)\)$", cmd.stdout, re.MULTILINE)
         self.fossil_json = int(match[1]) if match else 0
