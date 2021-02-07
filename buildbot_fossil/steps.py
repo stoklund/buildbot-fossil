@@ -309,4 +309,8 @@ class Fossil(Source):
         yield self.runCommand(cmd)
         if cmd.results() == CANCELLED:
             raise buildstep.BuildStepCancelled()
+
+        # There is no reason to keep repeating the environment in the logs.
+        self.logEnviron = False
+
         return cmd
