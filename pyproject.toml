@@ -11,7 +11,7 @@ disable = """
 
 [tool.poetry]
 name = "buildbot-fossil"
-version = "0.2.1-alpha.2"
+version = "0.3"
 description = "Fossil version control plugin for Buildbot"
 license = "GPL-2.0-only"
 authors = ["Jakob Stoklund Olesen <stoklund@2pi.dk>"]

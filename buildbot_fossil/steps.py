@@ -265,8 +265,8 @@ class Fossil(Source):
         yield self.runMkdir(self.workdir)
 
         # We need to refer to the repo file using the worker's path syntax.
-        pm = self.build.path_module
-        repo = pm.join("..", pm.split(self.repopath)[1])
+        pathm = self.build.path_module
+        repo = pathm.join("..", pathm.split(self.repopath)[1])
         cmd = yield self.fossil("open", repo, "--empty")
         return cmd.results()
 
