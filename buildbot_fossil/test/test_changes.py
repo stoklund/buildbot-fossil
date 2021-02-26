@@ -35,7 +35,7 @@ class TestRSSFossilPoller(
     @defer.inlineCallbacks
     def new_changesource(self, repourl, **kwargs):
         """
-        Create a new fake HTTP service and change source. Don't start them yet.
+        Create a new fake HTTP service and change source and start them.
         """
         # pylint: disable=attribute-defined-outside-init
         http_headers = {"User-Agent": "Buildbot"}
@@ -43,10 +43,6 @@ class TestRSSFossilPoller(
             self.master, self, repourl, headers=http_headers
         )
         self.changesource = FossilPoller(repourl, rss=True, **kwargs)
-
-    @defer.inlineCallbacks
-    def start_changesource(self):
-        """Start the change source service running"""
         yield self.attachChangeSource(self.changesource)
 
     @defer.inlineCallbacks
@@ -72,13 +68,13 @@ class TestRSSFossilPoller(
         """
         The describe() method can provide more info
         """
-        yield self.new_changesource("nowhere", pollAtLaunch=True)
+        yield self.new_changesource("nowhere")
         self.assertEqual(
-            "FossilPoller watching 'nowhere' [STOPPED - check log]",
+            "FossilPoller watching 'nowhere'",
             self.changesource.describe(),
         )
         self.http.expect("get", "/timeline.rss", params={"y": "ci"}, code=404)
-        yield self.start_changesource()
+        yield self.changesource.poll()
         self.assertEqual(
             "FossilPoller watching 'nowhere'", self.changesource.describe()
         )
@@ -160,9 +156,9 @@ class TestRSSFossilPoller(
         """
         Check that we can extract change entries from an RSS feed.
         """
-        yield self.new_changesource(REPOURL, pollAtLaunch=True)
+        yield self.new_changesource(REPOURL)
         self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS)
-        yield self.start_changesource()
+        yield self.changesource.poll()
 
         self.assertEqual(len(self.master.data.updates.changesAdded), 2)
 
@@ -214,10 +210,10 @@ class TestRSSFossilPoller(
         """
         Test that duplicates are filtered out.
         """
-        yield self.new_changesource(REPOURL, pollAtLaunch=True)
+        yield self.new_changesource(REPOURL)
         self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS)
         self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS2)
-        yield self.start_changesource()
+        yield self.changesource.poll()
         yield self.changesource.poll()
         # The two feeds have one item in common.
         self.assertEqual(len(self.master.data.updates.changesAdded), 3)
@@ -245,9 +241,9 @@ class TestRSSFossilPoller(
             ],
         )
 
-        yield self.new_changesource(REPOURL, pollAtLaunch=True)
+        yield self.new_changesource(REPOURL)
         self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS)
-        yield self.start_changesource()
+        yield self.changesource.poll()
 
         self.assertEqual(len(self.master.data.updates.changesAdded), 1)
         chdict = self.master.data.updates.changesAdded[0]
@@ -277,7 +273,7 @@ class TestJSONFossilPoller(
     @defer.inlineCallbacks
     def new_changesource(self, repourl, **kwargs):
         """
-        Create a new fake HTTP service and change source. Don't start them yet.
+        Create a new fake HTTP service and change source and start them.
         """
         # pylint: disable=attribute-defined-outside-init
         http_headers = {"User-Agent": "Buildbot"}
@@ -285,10 +281,6 @@ class TestJSONFossilPoller(
             self.master, self, repourl, headers=http_headers
         )
         self.changesource = FossilPoller(repourl, **kwargs)
-
-    @defer.inlineCallbacks
-    def start_changesource(self):
-        """Start the change source service running"""
         yield self.attachChangeSource(self.changesource)
 
     # pylint: disable=line-too-long
@@ -370,14 +362,14 @@ class TestJSONFossilPoller(
         """
         Check a simple JSON fetch, assuming we're already logged in.
         """
-        yield self.new_changesource(REPOURL, pollAtLaunch=True)
+        yield self.new_changesource(REPOURL)
         self.http.expect(
             "get",
             "/json/timeline/checkin",
             params={"files": True},
             content_json=self.JSON,
         )
-        yield self.start_changesource()
+        yield self.changesource.poll()
 
         self.assertEqual(len(self.master.data.updates.changesAdded), 2)
 
@@ -410,11 +402,11 @@ class TestJSONFossilPoller(
         """
         A fossil server that hasn't been configured with JSON will return HTTP 404.
         """
-        yield self.new_changesource(REPOURL, pollAtLaunch=True)
+        yield self.new_changesource(REPOURL)
         self.http.expect(
             "get", "/json/timeline/checkin", params={"files": True}, code=404
         )
-        yield self.start_changesource()
+        yield self.changesource.poll()
         self.assertLogged(f"HTTPStatus.NOT_FOUND {REPOURL}/json/timeline/checkin")
 
     JSON_ERROR = {
@@ -432,14 +424,14 @@ class TestJSONFossilPoller(
         """
         Check handling of some unexpected JSON API error.
         """
-        yield self.new_changesource(REPOURL, pollAtLaunch=True)
+        yield self.new_changesource(REPOURL)
         self.http.expect(
             "get",
             "/json/timeline/checkin",
             params={"files": True},
             content_json=self.JSON_ERROR,
         )
-        yield self.start_changesource()
+        yield self.changesource.poll()
         self.assertLogged("JSONError: FOSSIL-3002: No subcommand specified.")
 
     JSON_DENIED = {
@@ -480,7 +472,7 @@ class TestJSONFossilPoller(
         """
         Check that the poller will login as anonymous.
         """
-        yield self.new_changesource(REPOURL, pollAtLaunch=True)
+        yield self.new_changesource(REPOURL)
         self.http.expect(
             "get",
             "/json/timeline/checkin",
@@ -514,7 +506,7 @@ class TestJSONFossilPoller(
             content_json=self.JSON,
         )
 
-        yield self.start_changesource()
+        yield self.changesource.poll()
         self.assertLogged(
             "JSONAuthError: FOSSIL-2002: Check-in timeline requires 'h' access"
         )

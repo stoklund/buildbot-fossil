@@ -252,7 +252,7 @@ class TestFossil(
     def test_mode_full_copy(self):
         """Test the full/copy mode, assuming clone already exists."""
         self.setupStep(self.stepClass(REPOURL, mode="full", method="copy"))
-        self.changeWorkerSystem('win32')
+        self.changeWorkerSystem("win32")
         self.expectCommands(
             ExpectShell(".", ["fossil", "version", "-verbose"], logEnviron=True)
             + ExpectShell.log("stdio", stdout=FOSSIL_208)
