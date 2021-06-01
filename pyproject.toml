@@ -11,7 +11,7 @@ disable = """
 
 [tool.poetry]
 name = "buildbot-fossil"
-version = "0.3"
+version = "0.3.1"
 description = "Fossil version control plugin for Buildbot"
 license = "GPL-2.0-only"
 authors = ["Jakob Stoklund Olesen <stoklund@2pi.dk>"]
@@ -35,8 +35,8 @@ Fossil = "buildbot_fossil.steps:Fossil"
 
 [tool.poetry.dependencies]
 python = "^3.6"
-buildbot = "^2"
-treq = ">=20,<22"
+buildbot = "^3"
+treq = ">=20"
 
 [tool.poetry.dev-dependencies]
 buildbot = {path = "../buildbot/master", develop = true}
