@@ -2,10 +2,10 @@
 
 from buildbot.interfaces import WorkerSetupError
 from buildbot.process.results import CANCELLED, EXCEPTION, FAILURE, SUCCESS
-from buildbot.test.fake.remotecommand import Expect, ExpectShell
+from buildbot.test.expect import Expect, ExpectShell
+from buildbot.test.reactor import TestReactorMixin
 from buildbot.test.util import config, sourcesteps
 from buildbot.test.util.logging import LoggingMixin
-from buildbot.test.util.misc import TestReactorMixin
 from twisted.internet import defer
 from twisted.trial import unittest
 
@@ -58,20 +58,20 @@ JSON_STATUS = """{
 def expect_v215():
     """Expect a fossil version command, return v2.15"""
     return (
-        ExpectShell(".", ["fossil", "version", "-verbose"], logEnviron=True)
-        + ExpectShell.log("stdio", stdout=FOSSIL_215)
-        + 0
+        ExpectShell(".", ["fossil", "version", "-verbose"], log_environ=True)
+        .stdout(FOSSIL_215)
+        .exit(0)
     )
 
 
 def expect_fossil_dot(*args):
     """Expect a fossil command in the . worker directory."""
-    return ExpectShell(".", ["fossil"] + list(args), logEnviron=False)
+    return ExpectShell(".", ["fossil"] + list(args), log_environ=False)
 
 
 def expect_fossil(*args):
     """Expect a fossil command in the normal wkdir directory."""
-    return ExpectShell("wkdir", ["fossil"] + list(args), logEnviron=False)
+    return ExpectShell("wkdir", ["fossil"] + list(args), log_environ=False)
 
 
 def expect_open():
@@ -81,9 +81,7 @@ def expect_open():
 
 def expect_json_status():
     """Expect a json status command, return JSON example."""
-    return expect_fossil("json", "status") + ExpectShell.log(
-        "stdio", stdout=JSON_STATUS
-    )
+    return expect_fossil("json", "status").stdout(JSON_STATUS)
 
 
 def interrupt_cmd(cmd):
@@ -104,7 +102,7 @@ class TestFossil(
 
     def setUp(self):
         self.source_name = self.stepClass.__name__
-        self.setUpTestReactor()
+        self.setup_test_reactor()
         self.setUpLogging()
         return self.setUpSourceStep()
 
@@ -114,162 +112,162 @@ class TestFossil(
     @defer.inlineCallbacks
     def test_fossil_not_installed(self):
         """Test the case where the fossil executable is not in PATH on the worker."""
-        self.setupStep(self.stepClass(REPOURL))
-        self.expectCommands(
-            ExpectShell(".", ["fossil", "version", "-verbose"]) + FAILURE
+        self.setup_step(self.stepClass(REPOURL))
+        self.expect_commands(
+            ExpectShell(".", ["fossil", "version", "-verbose"]) .exit(1)
         )
-        self.expectException(WorkerSetupError)
-        self.expectOutcome(result=EXCEPTION)
-        yield self.runStep()
+        self.expect_exception(WorkerSetupError)
+        self.expect_outcome(result=EXCEPTION)
+        yield self.run_step()
         self.assertLogged("WorkerSetupError: fossil is not installed on worker")
 
     @defer.inlineCallbacks
     def test_fossil_is_a_teapot(self):
         """Test the case where the fossil executable has lost its mind."""
-        self.setupStep(self.stepClass(REPOURL))
-        self.expectCommands(
+        self.setup_step(self.stepClass(REPOURL))
+        self.expect_commands(
             ExpectShell(".", ["fossil", "version", "-verbose"])
-            + ExpectShell.log("stdio", stdout="I am a teapot!")
-            + 0
+            .stdout("I am a teapot!")
+            .exit(0)
         )
-        self.expectException(WorkerSetupError)
-        self.expectOutcome(result=EXCEPTION)
-        yield self.runStep()
+        self.expect_exception(WorkerSetupError)
+        self.expect_outcome(result=EXCEPTION)
+        yield self.run_step()
         self.assertLogged("WorkerSetupError: unrecognized fossil version")
 
     @defer.inlineCallbacks
     def test_triple_version(self):
         """Some fossil versions are a.b.c."""
-        self.setupStep(self.stepClass(REPOURL, mode="incremental"))
-        self.expectCommands(
+        self.setup_step(self.stepClass(REPOURL, mode="incremental"))
+        self.expect_commands(
             ExpectShell(".", ["fossil", "version", "-verbose"])
-            + ExpectShell.log("stdio", stdout=FOSSIL_212_1)
-            + 0,
-            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") + 0,
-            expect_fossil("revert") + 0,
-            expect_fossil("checkout", "tip") + 0,
-            expect_fossil("status", "--differ") + 0,
+            .stdout(FOSSIL_212_1)
+            .exit(0),
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") .exit(0),
+            expect_fossil("revert") .exit(0),
+            expect_fossil("checkout", "tip") .exit(0),
+            expect_fossil("status", "--differ") .exit(0),
         )
-        self.expectOutcome(result=SUCCESS)
-        yield self.runStep()
+        self.expect_outcome(result=SUCCESS)
+        yield self.run_step()
         self.assertLogged("worker test has Fossil/21201, JSON/0")
 
     @defer.inlineCallbacks
     def test_mode_incremental(self):
         """Test the incremental mode, assuming clone and workdir already exist."""
-        self.setupStep(self.stepClass(REPOURL, mode="incremental"))
-        self.expectCommands(
+        self.setup_step(self.stepClass(REPOURL, mode="incremental"))
+        self.expect_commands(
             expect_v215(),
-            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") + 0,
-            expect_fossil("revert") + 0,
-            expect_fossil("checkout", "tip") + 0,
-            expect_json_status() + 0,
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") .exit(0),
+            expect_fossil("revert") .exit(0),
+            expect_fossil("checkout", "tip") .exit(0),
+            expect_json_status() .exit(0),
         )
-        self.expectOutcome(result=SUCCESS)
-        self.expectProperty(
+        self.expect_outcome(result=SUCCESS)
+        self.expect_property(
             "got_revision",
             "9be9ceea32360ecb0fe0051681f8258e84665fd728c2ed69726550206619d2a7",
             "Fossil",
         )
-        self.expectProperty("got_tags", ["trunk", "release"], "Fossil")
-        yield self.runStep()
+        self.expect_property("got_tags", ["trunk", "release"], "Fossil")
+        yield self.run_step()
         self.assertLogged("worker test has Fossil/21500, JSON/20120713")
 
     @defer.inlineCallbacks
     def test_mode_incremental_no_repo(self):
         """Test the incremental mode, assuming no repo exists."""
-        self.setupStep(self.stepClass(REPOURL, mode="incremental"))
-        self.expectCommands(
+        self.setup_step(self.stepClass(REPOURL, mode="incremental"))
+        self.expect_commands(
             expect_v215(),
-            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") + 1,
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") .exit(1),
             # After pull fails, stat the repo clone to see if it exists.
-            Expect("stat", {"file": "wkdir.fossil", "logEnviron": False}) + FAILURE,
-            expect_fossil_dot("clone", REPOURL, "wkdir.fossil") + 0,
+            Expect("stat", {"file": "wkdir.fossil", "logEnviron": False}) .exit(1),
+            expect_fossil_dot("clone", REPOURL, "wkdir.fossil") .exit(0),
             # Then proceed as clobber/copy.
-            Expect("rmdir", {"dir": "wkdir", "logEnviron": False}) + SUCCESS,
-            expect_open() + 0,
-            expect_fossil("checkout", "tip") + 0,
-            expect_json_status() + 0,
+            Expect("rmdir", {"dir": "wkdir", "logEnviron": False}) .exit(0),
+            expect_open() .exit(0),
+            expect_fossil("checkout", "tip") .exit(0),
+            expect_json_status() .exit(0),
         )
-        self.expectOutcome(result=SUCCESS)
-        yield self.runStep()
+        self.expect_outcome(result=SUCCESS)
+        yield self.run_step()
 
     @defer.inlineCallbacks
     def test_mode_incremental_bad_repo(self):
         """Pull fails, but there is a repo file. Don't try to fix it, fail instead."""
-        self.setupStep(self.stepClass(REPOURL, mode="incremental"))
-        self.expectCommands(
+        self.setup_step(self.stepClass(REPOURL, mode="incremental"))
+        self.expect_commands(
             expect_v215(),
-            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") + 1,
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") .exit(1),
             # After pull fails, stat the repo clone to see if it exists.
-            Expect("stat", {"file": "wkdir.fossil", "logEnviron": False}) + SUCCESS,
+            Expect("stat", {"file": "wkdir.fossil", "logEnviron": False}) .exit(0),
         )
-        self.expectOutcome(result=FAILURE)
-        yield self.runStep()
+        self.expect_outcome(result=FAILURE)
+        yield self.run_step()
 
     @defer.inlineCallbacks
     def test_mode_incremental_cancelled_pull(self):
         """Cancelled during pull."""
-        self.setupStep(self.stepClass(REPOURL, mode="incremental"))
-        self.expectCommands(
+        self.setup_step(self.stepClass(REPOURL, mode="incremental"))
+        self.expect_commands(
             expect_v215(),
             expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil")
-            + Expect.behavior(interrupt_cmd),
+            .behavior(interrupt_cmd),
         )
-        self.expectOutcome(result=CANCELLED)
-        yield self.runStep()
+        self.expect_outcome(result=CANCELLED)
+        yield self.run_step()
 
     @defer.inlineCallbacks
     def test_mode_incremental_revert_failed(self):
         """Revert fails, fall back to full/copy."""
-        self.setupStep(self.stepClass(REPOURL, mode="incremental"))
-        self.expectCommands(
+        self.setup_step(self.stepClass(REPOURL, mode="incremental"))
+        self.expect_commands(
             expect_v215(),
-            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") + 0,
-            expect_fossil("revert") + 1,
-            Expect("rmdir", {"dir": "wkdir", "logEnviron": False}) + SUCCESS,
-            expect_open() + 0,
-            expect_fossil("checkout", "tip") + 0,
-            expect_json_status() + 0,
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") .exit(0),
+            expect_fossil("revert") .exit(1),
+            Expect("rmdir", {"dir": "wkdir", "logEnviron": False}) .exit(0),
+            expect_open() .exit(0),
+            expect_fossil("checkout", "tip") .exit(0),
+            expect_json_status() .exit(0),
         )
-        self.expectOutcome(result=SUCCESS)
-        yield self.runStep()
+        self.expect_outcome(result=SUCCESS)
+        yield self.run_step()
 
     @defer.inlineCallbacks
     def test_mode_incremental_checkout_failed(self):
         """Test the incremental mode, assuming clone and workdir already exist."""
-        self.setupStep(self.stepClass(REPOURL, mode="incremental"))
-        self.expectCommands(
+        self.setup_step(self.stepClass(REPOURL, mode="incremental"))
+        self.expect_commands(
             expect_v215(),
-            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") + 0,
-            expect_fossil("revert") + 0,
-            expect_fossil("checkout", "tip") + 1,
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") .exit(0),
+            expect_fossil("revert") .exit(0),
+            expect_fossil("checkout", "tip") .exit(1),
         )
-        self.expectOutcome(result=FAILURE)
-        yield self.runStep()
+        self.expect_outcome(result=FAILURE)
+        yield self.run_step()
 
     @defer.inlineCallbacks
     def test_mode_full_copy(self):
         """Test the full/copy mode, assuming clone already exists."""
-        self.setupStep(self.stepClass(REPOURL, mode="full", method="copy"))
-        self.changeWorkerSystem("win32")
-        self.expectCommands(
-            ExpectShell(".", ["fossil", "version", "-verbose"], logEnviron=True)
-            + ExpectShell.log("stdio", stdout=FOSSIL_208)
-            + 0,
-            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") + 0,
-            Expect("rmdir", {"dir": "wkdir", "logEnviron": False}) + SUCCESS,
-            Expect("mkdir", {"dir": "wkdir", "logEnviron": False}) + SUCCESS,
-            expect_fossil("open", r"..\wkdir.fossil", "--empty") + 0,
-            expect_fossil("checkout", "tip") + 0,
-            expect_json_status() + 0,
+        self.setup_step(self.stepClass(REPOURL, mode="full", method="copy"))
+        self.change_worker_system("win32")
+        self.expect_commands(
+            ExpectShell(".", ["fossil", "version", "-verbose"], log_environ=True)
+            .stdout(FOSSIL_208)
+            .exit(0),
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") .exit(0),
+            Expect("rmdir", {"dir": "wkdir", "logEnviron": False}) .exit(0),
+            Expect("mkdir", {"dir": "wkdir", "logEnviron": False}) .exit(0),
+            expect_fossil("open", r"..\wkdir.fossil", "--empty") .exit(0),
+            expect_fossil("checkout", "tip") .exit(0),
+            expect_json_status() .exit(0),
         )
-        self.expectOutcome(result=SUCCESS)
-        self.expectProperty(
+        self.expect_outcome(result=SUCCESS)
+        self.expect_property(
             "got_revision",
             "9be9ceea32360ecb0fe0051681f8258e84665fd728c2ed69726550206619d2a7",
             "Fossil",
         )
-        self.expectProperty("got_tags", ["trunk", "release"], "Fossil")
-        yield self.runStep()
+        self.expect_property("got_tags", ["trunk", "release"], "Fossil")
+        yield self.run_step()
         self.assertLogged("worker test has Fossil/20800, JSON/20120713")

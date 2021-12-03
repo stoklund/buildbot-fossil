@@ -3,9 +3,9 @@
 from datetime import datetime, timezone
 
 from buildbot.test.fake import httpclientservice as fakehttpclientservice
+from buildbot.test.reactor import TestReactorMixin
 from buildbot.test.util.changesource import ChangeSourceMixin
 from buildbot.test.util.logging import LoggingMixin
-from buildbot.test.util.misc import TestReactorMixin
 from buildbot.util import datetime2epoch, httpclientservice
 from twisted.internet import defer
 from twisted.trial import unittest
@@ -22,7 +22,7 @@ class TestRSSFossilPoller(
 
     @defer.inlineCallbacks
     def setUp(self):
-        self.setUpTestReactor()
+        self.setup_test_reactor()
         self.setUpLogging()
         yield self.setUpChangeSource()
         yield self.master.startService()
@@ -233,15 +233,17 @@ class TestRSSFossilPoller(
         """
         Test that the fetched revisions are saved across restarts.
         """
-        self.master.db.state.fakeState(
-            name=REPOURL,
-            class_name="FossilPoller",
+        yield self.new_changesource(REPOURL)
+
+        yield self.changesource.stopService()
+        self.master.db.state.set_fake_state(
+            self.changesource,
             last_fetch=[
                 "eade2f86c050cf06aca42cc7f1b8bfb9bda586823e0713e6933c736e679cce24",
             ],
         )
+        yield self.changesource.startService()
 
-        yield self.new_changesource(REPOURL)
         self.http.expect("get", "/timeline.rss", params={"y": "ci"}, content=self.RSS)
         yield self.changesource.poll()
 
@@ -260,7 +262,7 @@ class TestJSONFossilPoller(
 
     @defer.inlineCallbacks
     def setUp(self):
-        self.setUpTestReactor()
+        self.setup_test_reactor()
         self.setUpLogging()
         yield self.setUpChangeSource()
         yield self.master.startService()
