@@ -114,7 +114,7 @@ class TestFossil(
         """Test the case where the fossil executable is not in PATH on the worker."""
         self.setup_step(self.stepClass(REPOURL))
         self.expect_commands(
-            ExpectShell(".", ["fossil", "version", "-verbose"]) .exit(1)
+            ExpectShell(".", ["fossil", "version", "-verbose"]).exit(1)
         )
         self.expect_exception(WorkerSetupError)
         self.expect_outcome(result=EXCEPTION)
@@ -143,10 +143,10 @@ class TestFossil(
             ExpectShell(".", ["fossil", "version", "-verbose"])
             .stdout(FOSSIL_212_1)
             .exit(0),
-            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") .exit(0),
-            expect_fossil("revert") .exit(0),
-            expect_fossil("checkout", "tip") .exit(0),
-            expect_fossil("status", "--differ") .exit(0),
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil").exit(0),
+            expect_fossil("revert").exit(0),
+            expect_fossil("checkout", "tip").exit(0),
+            expect_fossil("status", "--differ").exit(0),
         )
         self.expect_outcome(result=SUCCESS)
         yield self.run_step()
@@ -158,10 +158,10 @@ class TestFossil(
         self.setup_step(self.stepClass(REPOURL, mode="incremental"))
         self.expect_commands(
             expect_v215(),
-            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") .exit(0),
-            expect_fossil("revert") .exit(0),
-            expect_fossil("checkout", "tip") .exit(0),
-            expect_json_status() .exit(0),
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil").exit(0),
+            expect_fossil("revert").exit(0),
+            expect_fossil("checkout", "tip").exit(0),
+            expect_json_status().exit(0),
         )
         self.expect_outcome(result=SUCCESS)
         self.expect_property(
@@ -179,15 +179,15 @@ class TestFossil(
         self.setup_step(self.stepClass(REPOURL, mode="incremental"))
         self.expect_commands(
             expect_v215(),
-            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") .exit(1),
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil").exit(1),
             # After pull fails, stat the repo clone to see if it exists.
-            Expect("stat", {"file": "wkdir.fossil", "logEnviron": False}) .exit(1),
-            expect_fossil_dot("clone", REPOURL, "wkdir.fossil") .exit(0),
+            Expect("stat", {"file": "wkdir.fossil", "logEnviron": False}).exit(1),
+            expect_fossil_dot("clone", REPOURL, "wkdir.fossil").exit(0),
             # Then proceed as clobber/copy.
-            Expect("rmdir", {"dir": "wkdir", "logEnviron": False}) .exit(0),
-            expect_open() .exit(0),
-            expect_fossil("checkout", "tip") .exit(0),
-            expect_json_status() .exit(0),
+            Expect("rmdir", {"dir": "wkdir", "logEnviron": False}).exit(0),
+            expect_open().exit(0),
+            expect_fossil("checkout", "tip").exit(0),
+            expect_json_status().exit(0),
         )
         self.expect_outcome(result=SUCCESS)
         yield self.run_step()
@@ -198,9 +198,9 @@ class TestFossil(
         self.setup_step(self.stepClass(REPOURL, mode="incremental"))
         self.expect_commands(
             expect_v215(),
-            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") .exit(1),
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil").exit(1),
             # After pull fails, stat the repo clone to see if it exists.
-            Expect("stat", {"file": "wkdir.fossil", "logEnviron": False}) .exit(0),
+            Expect("stat", {"file": "wkdir.fossil", "logEnviron": False}).exit(0),
         )
         self.expect_outcome(result=FAILURE)
         yield self.run_step()
@@ -211,8 +211,9 @@ class TestFossil(
         self.setup_step(self.stepClass(REPOURL, mode="incremental"))
         self.expect_commands(
             expect_v215(),
-            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil")
-            .behavior(interrupt_cmd),
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil").behavior(
+                interrupt_cmd
+            ),
         )
         self.expect_outcome(result=CANCELLED)
         yield self.run_step()
@@ -223,12 +224,12 @@ class TestFossil(
         self.setup_step(self.stepClass(REPOURL, mode="incremental"))
         self.expect_commands(
             expect_v215(),
-            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") .exit(0),
-            expect_fossil("revert") .exit(1),
-            Expect("rmdir", {"dir": "wkdir", "logEnviron": False}) .exit(0),
-            expect_open() .exit(0),
-            expect_fossil("checkout", "tip") .exit(0),
-            expect_json_status() .exit(0),
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil").exit(0),
+            expect_fossil("revert").exit(1),
+            Expect("rmdir", {"dir": "wkdir", "logEnviron": False}).exit(0),
+            expect_open().exit(0),
+            expect_fossil("checkout", "tip").exit(0),
+            expect_json_status().exit(0),
         )
         self.expect_outcome(result=SUCCESS)
         yield self.run_step()
@@ -239,9 +240,9 @@ class TestFossil(
         self.setup_step(self.stepClass(REPOURL, mode="incremental"))
         self.expect_commands(
             expect_v215(),
-            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") .exit(0),
-            expect_fossil("revert") .exit(0),
-            expect_fossil("checkout", "tip") .exit(1),
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil").exit(0),
+            expect_fossil("revert").exit(0),
+            expect_fossil("checkout", "tip").exit(1),
         )
         self.expect_outcome(result=FAILURE)
         yield self.run_step()
@@ -255,12 +256,12 @@ class TestFossil(
             ExpectShell(".", ["fossil", "version", "-verbose"], log_environ=True)
             .stdout(FOSSIL_208)
             .exit(0),
-            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil") .exit(0),
-            Expect("rmdir", {"dir": "wkdir", "logEnviron": False}) .exit(0),
-            Expect("mkdir", {"dir": "wkdir", "logEnviron": False}) .exit(0),
-            expect_fossil("open", r"..\wkdir.fossil", "--empty") .exit(0),
-            expect_fossil("checkout", "tip") .exit(0),
-            expect_json_status() .exit(0),
+            expect_fossil_dot("pull", REPOURL, "-R", "wkdir.fossil").exit(0),
+            Expect("rmdir", {"dir": "wkdir", "logEnviron": False}).exit(0),
+            Expect("mkdir", {"dir": "wkdir", "logEnviron": False}).exit(0),
+            expect_fossil("open", r"..\wkdir.fossil", "--empty").exit(0),
+            expect_fossil("checkout", "tip").exit(0),
+            expect_json_status().exit(0),
         )
         self.expect_outcome(result=SUCCESS)
         self.expect_property(
