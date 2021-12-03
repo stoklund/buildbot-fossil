@@ -222,7 +222,7 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
             yield self._json_login()
             payload = yield self._json_get("timeline/checkin", files=True)
 
-        changes = list()
+        changes = []
         for entry in reversed(payload["timeline"]):
             chdict = dict(
                 author=entry["user"],
@@ -307,7 +307,7 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
         etree = ET.fromstring(xml)
         project = etree.findtext("channel/title")
 
-        changes = list()
+        changes = []
         for node in etree.findall("channel/item"):
             ch_dict = dict(
                 revlink=node.findtext("link"),
@@ -342,7 +342,7 @@ class FossilPoller(base.ReconfigurablePollingChangeSource, StateMixin):
 
     @defer.inlineCallbacks
     def _process_changes(self, changes):
-        fetched = list()
+        fetched = []
         for ch_dict in changes:
             rev = ch_dict["revision"]
             fetched.append(rev)
