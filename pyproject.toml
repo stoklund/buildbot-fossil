@@ -11,7 +11,7 @@ disable = """
 
 [tool.poetry]
 name = "buildbot-fossil"
-version = "1.0"
+version = "1.1"
 description = "Fossil version control plugin for Buildbot"
 license = "GPL-2.0-only"
 authors = ["Jakob Stoklund Olesen <stoklund@2pi.dk>"]
@@ -41,10 +41,10 @@ treq = ">=20"
 [tool.poetry.dev-dependencies]
 buildbot = {path = "../buildbot/master", develop = true}
 mock = "^4.0.3"
-pylint = "^2.6.0"
-Sphinx = "^3.4.3"
-sphinx-autobuild = "^2020.9.1"
-sphinx-rtd-theme = "^0.5.1"
+pylint = "*"
+Sphinx = "*"
+sphinx-autobuild = "*"
+sphinx-rtd-theme = "*"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

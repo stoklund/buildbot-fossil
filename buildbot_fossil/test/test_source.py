@@ -2,7 +2,7 @@
 
 from buildbot.interfaces import WorkerSetupError
 from buildbot.process.results import CANCELLED, EXCEPTION, FAILURE, SUCCESS
-from buildbot.test.expect import Expect, ExpectShell
+from buildbot.test.steps import Expect, ExpectShell
 from buildbot.test.reactor import TestReactorMixin
 from buildbot.test.util import config, sourcesteps
 from buildbot.test.util.logging import LoggingMixin
@@ -86,7 +86,6 @@ def expect_json_status():
 
 def interrupt_cmd(cmd):
     """Behavior callback which interrupts the current command."""
-    cmd.set_run_interrupt()
     cmd.interrupt("test")
 
 

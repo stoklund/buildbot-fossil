@@ -9,7 +9,7 @@ from buildbot.interfaces import WorkerSetupError
 from buildbot.process import buildstep, remotecommand
 from buildbot.process.results import CANCELLED, FAILURE, SUCCESS
 from buildbot.steps.source.base import Source
-from buildbot.util.logger import Logger
+from twisted.logger import Logger
 from twisted.internet import defer
 
 # First Fossil version that supports `open --workdir`
